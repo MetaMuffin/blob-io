@@ -95,12 +95,15 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 
     updateCache()
     drawScoreboard(ctx)
-    
+
     ctx.save()
-    var scale = canvas_sx / POLYGON_RADIUS_FAC / Object.values(paddles).length / 5;
+    var scale = ((canvas_sx > canvas_sy) ? canvas_sy : canvas_sx) / POLYGON_RADIUS_FAC / Object.values(paddles).length / 5;
     ctx.transform(scale, 0, 0, scale, canvas_sx / 2, canvas_sy / 2);
-    // ctx.rotate(paddles[you].index / paddle_count * 2 * Math.PI)
-    
+    if (paddles[you]) {
+        var rot = paddles[you].index / paddle_count * 2 * Math.PI
+        ctx.rotate(rot)
+    }
+
     ctx.fillStyle = "red"
     for (const id in balls) {
         if (!Object.prototype.hasOwnProperty.call(balls, id)) continue
@@ -111,8 +114,14 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     for (const id in paddles) {
         if (!Object.prototype.hasOwnProperty.call(paddles, id)) continue
         const p = paddles[id];
-        p.draw(ctx,you == id)
+        p.draw(ctx, you == id)
     }
+
+    ctx.beginPath()
+    ctx.strokeStyle = "#dd0000"
+    ctx.arc(0, 0, POLYGON_RADIUS_FAC * paddle_count * 2, 0, 2 * Math.PI);
+    ctx.stroke()
+
 
     ctx.restore()
 

@@ -21,16 +21,20 @@ export function id(): string {
 
 export function draw_rect_rotated(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, ang: number) {
     ctx.save()
-    // ctx.translate(x - w / 2, y - h / 2)
     ctx.rotate(-ang)
-    // ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.fillRect(-w / 2 + x, y, w, h);
-
+    ctx.restore()
+}
+export function draw_text_rotated(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, ang: number) {
+    ctx.save()
+    ctx.rotate(-ang)
+    ctx.fillText(text, x, y);
     ctx.restore()
 }
 
-export var polygon_radius:number =0
-export var paddle_count:number =0
+
+export var polygon_radius: number = 0
+export var paddle_count: number = 0
 export function updateCache() {
     paddle_count = Object.values(paddles).length
     polygon_radius = POLYGON_RADIUS_FAC * paddle_count

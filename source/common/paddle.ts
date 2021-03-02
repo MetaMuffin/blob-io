@@ -1,6 +1,6 @@
 import { PADDLE_SIZE, POLYGON_RADIUS_FAC } from "../global"
 import { balls } from "./ball"
-import { draw_rect_rotated, id, polygon_radius } from "./helper"
+import { draw_rect_rotated, draw_text_rotated, id, paddle_count, polygon_radius } from "./helper"
 
 export var paddles: { [key: string]: Paddle } = {}
 export var removed: string[] = []
@@ -30,8 +30,9 @@ export class Paddle {
         var ang = (this.index / Object.values(paddles).length) * 2 * Math.PI
         ctx.fillStyle = is_you ? "#99ff99" : "#00dd00"
         draw_rect_rotated(ctx, this.position, polygon_radius, PADDLE_SIZE, 10, ang);
+        draw_text_rotated(ctx, this.position, polygon_radius + 30, this.nick, ang)
         ctx.fillStyle = "white"
-        draw_rect_rotated(ctx, 0, polygon_radius + 10, 1000, 1, ang);
+        draw_rect_rotated(ctx, 0, polygon_radius + 10, POLYGON_RADIUS_FAC * 10, 1, ang);
     }
 
     server_tick() {
