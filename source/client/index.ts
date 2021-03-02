@@ -1,4 +1,4 @@
-import { BALL_RADIUS, PADDLE_MOVE_SPEED, PADDLE_SIZE, POLYGON_RADIUS, TICKRATE } from "../global";
+import { BALL_RADIUS, PADDLE_MOVE_SPEED, PADDLE_SIZE, POLYGON_RADIUS_FAC, TICKRATE } from "../global";
 
 var [canvas_sx, canvas_sy] = [0, 0];
 var paddle_vel = 0;
@@ -71,7 +71,6 @@ window.onload = async () => {
 export function tick() {
     paddle_pos += paddle_vel * PADDLE_MOVE_SPEED
     const packet_out = { position: paddle_pos }
-    console.log(packet_out);
     ws.send(JSON.stringify(packet_out))
 }
 
@@ -81,13 +80,17 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
-    ctx.save()
-    ctx.transform(1, 0, 0, 1, canvas_sx / 2, canvas_sy / 2);
-
-    var scoreboard: [number,string][] = paddles.map(p => [p.score, p.nick])
-    scoreboard.sort((a, b) => a[0] - b[0])
+    var scoreboard: [number, string][] = paddles.map(p => [p.score, p.nick])
+    scoreboard.sort((b, a) => a[0] - b[0])
     ctx.fillStyle = "white"
-    ctx.fillText(scoreboard.map(e => `${e[0]} ${e[1]}`).join("\n"), 0, 0)
+    ctx.font = "20px sans-serif"
+    ctx.fillText("Multipong Scoreboard:", 20, 30);
+    scoreboard.forEach((e, i) => ctx.fillText(`${i + 1}. ${e[0]} ${e[1]}`, 20, i * 20 + 60))
+
+    ctx.save()
+    var scale = canvas_sx / POLYGON_RADIUS_FAC / paddles.length / 5;
+
+    ctx.transform(scale, 0, 0, scale, canvas_sx / 2, canvas_sy / 2);
 
     ctx.fillStyle = "red"
     for (const b of balls) {
@@ -99,9 +102,9 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         const p = paddles[pi];
         var ang = (pi / paddles.length) * 2 * Math.PI
         ctx.fillStyle = "green"
-        draw_rect_rotated(ctx, p.position, POLYGON_RADIUS, PADDLE_SIZE, 10, ang);
+        draw_rect_rotated(ctx, p.position, POLYGON_RADIUS_FAC * paddles.length, PADDLE_SIZE, 10, ang);
         ctx.fillStyle = "white"
-        draw_rect_rotated(ctx, 0, POLYGON_RADIUS + 10, 1000, 1, ang);
+        draw_rect_rotated(ctx, 0, POLYGON_RADIUS_FAC * paddles.length + 10, 1000, 1, ang);
     }
 
 
@@ -115,7 +118,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 export function draw_rect_rotated(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, ang: number) {
     ctx.save()
     // ctx.translate(x - w / 2, y - h / 2)
-    ctx.rotate(ang)
+    ctx.rotate(-ang)
     // ctx.fillRect(-w / 2, -h / 2, w, h);
     ctx.fillRect(-w / 2 + x, y, w, h);
 

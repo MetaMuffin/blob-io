@@ -6,12 +6,13 @@ import { existsSync, readFile, readFileSync } from "fs";
 import http from "http"
 import https from "https"
 import expressWs from "express-ws";
-import { PADDLE_SIZE, POLYGON_RADIUS, TICKRATE } from "../global";
+import { BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, PADDLE_SIZE, POLYGON_RADIUS_FAC, TICKRATE } from "../global";
 
 interface Paddle {
     position: number,
     score: number,
     ws: any
+    nick: string,
 }
 interface Ball {
     x: number,
@@ -52,8 +53,9 @@ async function main() {
     app_ws.ws("/ws", function (ws, req) {
         var spawned = false
         console.log("CONNECT");
-        var t_paddle: Paddle = { ws, position: 0, score: 0 }
-        var t_ball: Ball = { x: 0, y: 0, vx: 2, vy: 2 }
+        var t_paddle: Paddle = { ws, position: 0, score: 0, nick: "an unnamed paddle" }
+        var speed = initialBallSpeed()
+        var t_ball: Ball = { x: 0, y: 0, vx: speed[0], vy: speed[1] }
 
         ws.onmessage = (ev) => {
             var j;
@@ -67,6 +69,7 @@ async function main() {
                 spawned = true;
             }
             t_paddle.position = j.position || 0
+            if (j.nick) t_paddle.nick = j.nick
         }
         ws.onclose = () => {
             console.log("DISCONNECT");
@@ -107,11 +110,13 @@ async function main() {
 function update() {
     for (let pi = 0; pi < paddles.length; pi++) {
         const p = paddles[pi];
+        if (!p.ws.readyState) return
         p.ws.send(JSON.stringify({
             balls,
             paddles: paddles.map(p => ({
                 position: p.position,
-                score: p.score 
+                score: p.score,
+                nick: p.nick
             })),
             you: pi
         }))
@@ -122,8 +127,8 @@ function update() {
             // the surface of the paddle as a line
             var ang = (pi / paddles.length) * 2 * Math.PI
             var [pcx, pcy] = [
-                Math.sin(ang) * POLYGON_RADIUS,
-                Math.cos(ang) * POLYGON_RADIUS
+                Math.sin(ang) * POLYGON_RADIUS_FAC * paddles.length,
+                Math.cos(ang) * POLYGON_RADIUS_FAC * paddles.length
             ]
             var [px1, py1, px2, py2] = [
                 pcx + Math.sin(ang + Math.PI * 0.5) * (PADDLE_SIZE * 0.5 + p.position),
@@ -133,8 +138,7 @@ function update() {
             ]
             var collision = intersects(px1, py1, px2, py2, b.x, b.y, b.x + b.vx, b.y + b.vy)
             if (collision) {
-                console.log("we have a collision !!!");
-                // flip velocity vector on axis of (px1,py1)->(px2,py2)
+                // flip velocity vector on normal of (px1,py1)->(px2,py2)
                 var paddle_normal = [
                     Math.sin(ang),
                     Math.cos(ang)
@@ -142,10 +146,16 @@ function update() {
                 var paddle_ball_dot = paddle_normal[0] * b.vx + paddle_normal[1] * b.vy
                 var new_vx = b.vx - 2 * paddle_normal[0] * paddle_ball_dot
                 var new_vy = b.vx - 2 * paddle_normal[1] * paddle_ball_dot
-                b.vx = new_vx
-                b.vy = new_vy
+                b.vx = new_vx * BALL_SPEED_INCREASE + Math.random() * BALL_VEL_RANDOMIZATION
+                b.vy = new_vy * BALL_SPEED_INCREASE + Math.random() * BALL_VEL_RANDOMIZATION
                 p.score += 1
             }
+        }
+        var ball_distance = Math.sqrt(b.x * b.x + b.y * b.y);
+        if (ball_distance > POLYGON_RADIUS_FAC * paddles.length * 2) {
+            b.x = 0;
+            b.y = 0;
+            [b.vx, b.vy] = initialBallSpeed()
         }
         b.x += b.vx
         b.y += b.vy
@@ -163,6 +173,14 @@ function intersects(a: number, b: number, c: number, d: number, p: number, q: nu
         gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
         return (0 <= lambda && lambda <= 1) && (0 <= gamma && gamma <= 1);
     }
-};
+}
+
+function initialBallSpeed(): [number, number] {
+    var [vx, vy] = [Math.random() * 2 - 1, Math.random() * 2 - 1]
+    var l = 1 / Math.sqrt(vx * vx + vy * vy);
+    vx *= l * BALL_SPEED_INITIAL;
+    vy *= l * BALL_SPEED_INITIAL;
+    return [vx, vy]
+}
 
 main();
