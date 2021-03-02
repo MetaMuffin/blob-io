@@ -7,22 +7,9 @@ import http from "http"
 import https from "https"
 import expressWs from "express-ws";
 import { BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, PADDLE_SIZE, POLYGON_RADIUS_FAC, TICKRATE } from "../global";
+import { Paddle, paddles, updateIndecies } from "../common/paddle";
+import { Ball, balls } from "../common/ball";
 
-interface Paddle {
-    position: number,
-    score: number,
-    ws: any
-    nick: string,
-}
-interface Ball {
-    x: number,
-    y: number,
-    vx: number,
-    vy: number
-}
-
-var paddles: Paddle[] = []
-var balls: Ball[] = []
 
 async function main() {
     const app = Express();
@@ -41,8 +28,12 @@ async function main() {
     //app.use(urlencoded({ extended: true }));
 
     app.get("/", (req, res) => {
-        res.sendFile(join(__dirname, "../../public/index.html"));
+        res.sendFile(join(__dirname, "../../public/hub.html"));
     });
+    app.get("/game", (req, res) => {
+        res.sendFile(join(__dirname, "../../public/game.html"));
+    });
+
 
     app.use("/static", estatic(join(__dirname, "../../public")));
 
@@ -53,9 +44,7 @@ async function main() {
     app_ws.ws("/ws", function (ws, req) {
         var spawned = false
         console.log("CONNECT");
-        var t_paddle: Paddle = { ws, position: 0, score: 0, nick: "an unnamed paddle" }
-        var speed = initialBallSpeed()
-        var t_ball: Ball = { x: 0, y: 0, vx: speed[0], vy: speed[1] }
+        var t_paddle: Paddle
 
         ws.onmessage = (ev) => {
             var j;
@@ -63,21 +52,21 @@ async function main() {
                 j = JSON.parse(ev.data.toString())
             } catch (e) { ws.close(); console.log("INVALID JSON") }
             if (!spawned) {
-                console.log("SPAWN")
-                paddles.push(t_paddle)
-                balls.push(t_ball)
+                console.log("SPAWN");
                 spawned = true;
+                t_paddle = new Paddle()
+                t_paddle.ws = ws
+                new Ball()
             }
             t_paddle.position = j.position || 0
             if (j.nick) t_paddle.nick = j.nick
         }
         ws.onclose = () => {
             console.log("DISCONNECT");
-            paddles.splice(paddles.findIndex(e => e == t_paddle), 1)
-            balls.splice(balls.findIndex(e => e == t_ball), 1)
+            Object.values(balls)[0].destroy()
+            t_paddle.destroy()
         }
     })
-
 
     app.use((req, res, next) => {
         res.status(404);
@@ -87,100 +76,22 @@ async function main() {
     });
 
     app_ws.listen(8080, "0.0.0.0", () => console.log("listening..."))
-
-    // var mode = readFileSync(join(__dirname, "../../mode")).toString().trim()
-    // var hostname = readFileSync(join(__dirname, "../../hostname")).toString().trim()
-
-    // const srv = http.createServer(app)
-    // srv.listen(mode == "production" ? 80 : 8080, hostname, () => {
-    //     console.log("listening with http service");
-    // })
-    // if (existsSync(join(__dirname, "../../../certs"))) {
-    //     const srvs = https.createServer({
-    //         cert: readFileSync(join(__dirname, "../certs/cert.pem")),
-    //         key: readFileSync(join(__dirname, "../certs/key.pem")),
-    //     }, app)
-    //     srvs.listen(mode == "production" ? 443 : 8443, hostname, () => {
-    //         console.log("listening with https service on");
-    //     })
-    // }
-    setInterval(() => update(), 1000 / TICKRATE);
+    setInterval(() => tick(), 1000 / TICKRATE);
 }
 
-function update() {
-    for (let pi = 0; pi < paddles.length; pi++) {
-        const p = paddles[pi];
-        if (!p.ws.readyState) return
-        p.ws.send(JSON.stringify({
-            balls,
-            paddles: paddles.map(p => ({
-                position: p.position,
-                score: p.score,
-                nick: p.nick
-            })),
-            you: pi
-        }))
-    }
-    for (const b of balls) {
-        for (let pi = 0; pi < paddles.length; pi++) {
-            const p = paddles[pi];
-            // the surface of the paddle as a line
-            var ang = (pi / paddles.length) * 2 * Math.PI
-            var [pcx, pcy] = [
-                Math.sin(ang) * POLYGON_RADIUS_FAC * paddles.length,
-                Math.cos(ang) * POLYGON_RADIUS_FAC * paddles.length
-            ]
-            var [px1, py1, px2, py2] = [
-                pcx + Math.sin(ang + Math.PI * 0.5) * (PADDLE_SIZE * 0.5 + p.position),
-                pcy + Math.cos(ang + Math.PI * 0.5) * (PADDLE_SIZE * 0.5 + p.position),
-                pcx + Math.sin(ang + Math.PI * 0.5) * (-PADDLE_SIZE * 0.5 + p.position),
-                pcy + Math.cos(ang + Math.PI * 0.5) * (-PADDLE_SIZE * 0.5 + p.position),
-            ]
-            var collision = intersects(px1, py1, px2, py2, b.x, b.y, b.x + b.vx, b.y + b.vy)
-            if (collision) {
-                // flip velocity vector on normal of (px1,py1)->(px2,py2)
-                var paddle_normal = [
-                    Math.sin(ang),
-                    Math.cos(ang)
-                ]
-                var paddle_ball_dot = paddle_normal[0] * b.vx + paddle_normal[1] * b.vy
-                var new_vx = b.vx - 2 * paddle_normal[0] * paddle_ball_dot
-                var new_vy = b.vx - 2 * paddle_normal[1] * paddle_ball_dot
-                b.vx = new_vx * BALL_SPEED_INCREASE + Math.random() * BALL_VEL_RANDOMIZATION
-                b.vy = new_vy * BALL_SPEED_INCREASE + Math.random() * BALL_VEL_RANDOMIZATION
-                p.score += 1
-            }
+function tick() {
+    for (const id in paddles) {
+        if (Object.prototype.hasOwnProperty.call(paddles, id)) {
+            const p = paddles[id];
+            p.server_tick()
         }
-        var ball_distance = Math.sqrt(b.x * b.x + b.y * b.y);
-        if (ball_distance > POLYGON_RADIUS_FAC * paddles.length * 2) {
-            b.x = 0;
-            b.y = 0;
-            [b.vx, b.vy] = initialBallSpeed()
+    }
+    for (const id in balls) {
+        if (Object.prototype.hasOwnProperty.call(balls, id)) {
+            const b = balls[id];
+            b.server_tick()
         }
-        b.x += b.vx
-        b.y += b.vy
     }
-}
-
-// returns true iff the line from (a,b)->(c,d) intersects with (p,q)->(r,s)
-function intersects(a: number, b: number, c: number, d: number, p: number, q: number, r: number, s: number) {
-    var det, gamma, lambda;
-    det = (c - a) * (s - q) - (r - p) * (d - b);
-    if (det === 0) {
-        return false;
-    } else {
-        lambda = ((s - q) * (r - a) + (p - r) * (s - b)) / det;
-        gamma = ((b - d) * (r - a) + (c - a) * (s - b)) / det;
-        return (0 <= lambda && lambda <= 1) && (0 <= gamma && gamma <= 1);
-    }
-}
-
-function initialBallSpeed(): [number, number] {
-    var [vx, vy] = [Math.random() * 2 - 1, Math.random() * 2 - 1]
-    var l = 1 / Math.sqrt(vx * vx + vy * vy);
-    vx *= l * BALL_SPEED_INITIAL;
-    vy *= l * BALL_SPEED_INITIAL;
-    return [vx, vy]
 }
 
 main();
