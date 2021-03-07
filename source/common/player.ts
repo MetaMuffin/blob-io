@@ -1,8 +1,8 @@
 import { CIRCLE_RADIUS_FAC, PLAYER_RADIUS } from "../global"
 import { elements, GameElement } from "./common"
-import { player_count, serialized, updateCache } from "./helper"
+import { players } from "./el_types"
+import { cache, serialized } from "./helper"
 
-export var players: { [key: string]: Player } = {}
 
 export class Player extends GameElement {
 
@@ -29,7 +29,7 @@ export class Player extends GameElement {
     }
 
     client_draw(ctx: CanvasRenderingContext2D) {
-        var ang = (this.index / Object.values(players).length) * 2 * Math.PI
+        var ang = (this.index / cache.player_count) * 2 * Math.PI
         ctx.fillStyle = "#00dd00"
         var pos = this.pos
         ctx.beginPath()
@@ -42,10 +42,10 @@ export class Player extends GameElement {
     }
 
     get pos(): [number, number] {
-        var ang = ((this.position + this.index) / Object.values(players).length) * 2 * Math.PI
+        var ang = ((this.position + this.index) / cache.player_count) * 2 * Math.PI
         return [
-            Math.sin(ang) * CIRCLE_RADIUS_FAC * player_count,
-            Math.cos(ang) * CIRCLE_RADIUS_FAC * player_count
+            Math.sin(ang) * CIRCLE_RADIUS_FAC * cache.player_count,
+            Math.cos(ang) * CIRCLE_RADIUS_FAC * cache.player_count
         ]
     }
 
@@ -62,3 +62,7 @@ export function updateIndecies() {
 function draw_rect_rotated(ctx: CanvasRenderingContext2D, position: number, polygon_radius: any, PADDLE_SIZE: number, arg4: number, ang: number) {
     throw new Error("Function not implemented.")
 }
+function updateCache() {
+    throw new Error("Function not implemented.")
+}
+

@@ -1,8 +1,8 @@
-import { Ball, balls } from "../common/ball";
+import { Ball } from "../common/ball";
 import { elements, removed_elements } from "../common/common";
-import { element_types } from "../common/el_types";
-import { player_count, updateCache } from "../common/helper";
-import { Player, players } from "../common/player";
+import { balls, element_types, players, updateCache } from "../common/el_types";
+import { cache } from "../common/helper";
+import { Player } from "../common/player";
 import { BALL_RADIUS, PADDLE_MOVE_SPEED, CIRCLE_RADIUS_FAC, TICKRATE } from "../global";
 
 var [canvas_sx, canvas_sy] = [0, 0];
@@ -99,7 +99,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     var scale = ((canvas_sx > canvas_sy) ? canvas_sy : canvas_sx) / CIRCLE_RADIUS_FAC / Object.values(players).length / 5;
     ctx.transform(scale, 0, 0, scale, canvas_sx / 2, canvas_sy / 2);
     if (players[you]) {
-        var rot = players[you].index / player_count * 2 * Math.PI
+        var rot = players[you].index / cache.player_count * 2 * Math.PI
         ctx.rotate(rot)
     }
 
@@ -118,7 +118,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 
     ctx.beginPath()
     ctx.strokeStyle = "#dd0000"
-    ctx.arc(0, 0, CIRCLE_RADIUS_FAC * player_count * 2, 0, 2 * Math.PI);
+    ctx.arc(0, 0, CIRCLE_RADIUS_FAC * cache.player_count * 2, 0, 2 * Math.PI);
     ctx.stroke()
 
 

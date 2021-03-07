@@ -1,9 +1,8 @@
 import { BALL_RADIUS, BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, CIRCLE_RADIUS_FAC } from "../global"
 import { elements, GameElement } from "./common"
+import { balls, players } from "./el_types"
 import { id, intersects } from "./helper"
-import { players } from "./player"
 
-export var balls: { [key: string]: Ball } = {}
 
 export class Ball extends GameElement {
     x: number = 0

@@ -1,7 +1,4 @@
 import { serialized, serializedMembers } from "./helper";
-import { Ball } from "./ball";
-import { Player } from "./player";
-
 
 export var elements: { [key: string]: GameElement } = {}
 export var removed_elements: GameElement[] = []

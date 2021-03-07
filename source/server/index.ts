@@ -7,10 +7,11 @@ import http from "http"
 import https from "https"
 import expressWs from "express-ws";
 import { BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, CIRCLE_RADIUS_FAC, TICKRATE } from "../global";
-import { Player, players, updateIndecies } from "../common/player";
-import { Ball, balls } from "../common/ball";
+import { Player, updateIndecies } from "../common/player";
+import { Ball} from "../common/ball";
 import { id } from "../common/helper";
 import { elements, removed_elements } from "../common/common";
+import { balls, players } from "../common/el_types";
 
 
 var websockets: any[] = []

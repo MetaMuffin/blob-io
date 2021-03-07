@@ -1,6 +1,5 @@
 import { BALL_SPEED_INITIAL, CIRCLE_RADIUS_FAC } from "../global";
 import { GameElement } from "./common";
-import { players } from "./player";
 
 // returns true if the line from (a,b)->(c,d) intersects with (p,q)->(r,s)
 export function intersects(a: number, b: number, c: number, d: number, p: number, q: number, r: number, s: number) {
@@ -20,11 +19,9 @@ export function id(): string {
 }
 
 
-export var circle_radius: number = 0
-export var player_count: number = 0
-export function updateCache() {
-    player_count = Object.values(players).length
-    circle_radius = CIRCLE_RADIUS_FAC * player_count
+export var cache = {
+    circle_radius: 0,
+    player_count: 0,
 }
 
 export interface InterpolatorConfig {
