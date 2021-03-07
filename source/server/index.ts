@@ -6,10 +6,14 @@ import { existsSync, readFile, readFileSync } from "fs";
 import http from "http"
 import https from "https"
 import expressWs from "express-ws";
-import { BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, PADDLE_SIZE, POLYGON_RADIUS_FAC, TICKRATE } from "../global";
-import { Paddle, paddles, updateIndecies } from "../common/paddle";
+import { BALL_SPEED_INCREASE, BALL_SPEED_INITIAL, BALL_VEL_RANDOMIZATION, CIRCLE_RADIUS_FAC, TICKRATE } from "../global";
+import { Player, players, updateIndecies } from "../common/player";
 import { Ball, balls } from "../common/ball";
+import { id } from "../common/helper";
+import { elements, removed_elements } from "../common/common";
 
+
+var websockets: any[] = []
 
 async function main() {
     const app = Express();
@@ -44,7 +48,8 @@ async function main() {
     app_ws.ws("/ws", function (ws, req) {
         var spawned = false
         console.log("CONNECT");
-        var t_paddle: Paddle
+        var t_paddle: Player
+        websockets.push(ws)
 
         ws.onmessage = (ev) => {
             var j;
@@ -54,9 +59,9 @@ async function main() {
             if (!spawned) {
                 console.log("SPAWN");
                 spawned = true;
-                t_paddle = new Paddle()
+                t_paddle = new Player({ nick: "asd", position: 0, score: 0, id: id() })
                 t_paddle.ws = ws
-                new Ball()
+                new Ball(Ball.default_props)
             }
             t_paddle.position = j.position || 0
             if (j.nick) t_paddle.nick = j.nick
@@ -65,6 +70,7 @@ async function main() {
             console.log("DISCONNECT");
             Object.values(balls)[0].destroy()
             t_paddle.destroy()
+            websockets.splice(websockets.findIndex(e => e == ws))
         }
     })
 
@@ -80,9 +86,9 @@ async function main() {
 }
 
 function tick() {
-    for (const id in paddles) {
-        if (Object.prototype.hasOwnProperty.call(paddles, id)) {
-            const p = paddles[id];
+    for (const id in players) {
+        if (Object.prototype.hasOwnProperty.call(players, id)) {
+            const p = players[id];
             p.server_tick()
         }
     }
@@ -92,6 +98,20 @@ function tick() {
             b.server_tick()
         }
     }
+
+    for (const w of websockets) {
+        var s = JSON.stringify({
+            removed: removed_elements.map(e => e.id),
+            updates: Object.values(elements).map(e => e.props)
+        })
+        try{
+            w.send(s)
+        } catch (e) {
+            console.log(e);
+        }
+        
+    }
+    while (removed_elements.length > 0) removed_elements.pop()
 }
 
 main();

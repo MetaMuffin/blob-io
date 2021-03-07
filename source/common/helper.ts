@@ -1,7 +1,8 @@
-import { BALL_SPEED_INITIAL, POLYGON_RADIUS_FAC } from "../global";
-import { paddles } from "./paddle";
+import { BALL_SPEED_INITIAL, CIRCLE_RADIUS_FAC } from "../global";
+import { GameElement } from "./common";
+import { players } from "./player";
 
-// returns true iff the line from (a,b)->(c,d) intersects with (p,q)->(r,s)
+// returns true if the line from (a,b)->(c,d) intersects with (p,q)->(r,s)
 export function intersects(a: number, b: number, c: number, d: number, p: number, q: number, r: number, s: number) {
     var det, gamma, lambda;
     det = (c - a) * (s - q) - (r - p) * (d - b);
@@ -19,23 +20,63 @@ export function id(): string {
 }
 
 
-export function draw_rect_rotated(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, ang: number) {
-    ctx.save()
-    ctx.rotate(-ang)
-    ctx.fillRect(-w / 2 + x, y, w, h);
-    ctx.restore()
-}
-export function draw_text_rotated(ctx: CanvasRenderingContext2D, x: number, y: number, text: string, ang: number) {
-    ctx.save()
-    ctx.rotate(-ang)
-    ctx.fillText(text, x, y);
-    ctx.restore()
-}
-
-
-export var polygon_radius: number = 0
-export var paddle_count: number = 0
+export var circle_radius: number = 0
+export var player_count: number = 0
 export function updateCache() {
-    paddle_count = Object.values(paddles).length
-    polygon_radius = POLYGON_RADIUS_FAC * paddle_count
+    player_count = Object.values(players).length
+    circle_radius = CIRCLE_RADIUS_FAC * player_count
+}
+
+export interface InterpolatorConfig {
+    duration: number,
+    timing_function: (a: number) => number
+}
+
+export class Interpolator {
+    private keyframes: [number, number][] = []
+    public config: InterpolatorConfig
+
+    constructor(initial: number, config?: InterpolatorConfig) {
+        this.config = config || {
+            duration: 1000,
+            timing_function: a => a
+        }
+        this.keyframes.push([Interpolator.reltime(), initial])
+    }
+
+    public static reltime() {
+        return Date.now()
+    }
+
+    get value() {
+        if (this.keyframes.length < 1) return 0
+        if (this.keyframes.length == 1) return this.keyframes[0][1]
+
+        var now = Interpolator.reltime()
+        var progress = (now - this.keyframes[0][0])
+        var timed_progress = this.config.timing_function(progress)
+        var gap = (this.keyframes[0][1] - this.keyframes[1][1])
+        var adjust = gap * timed_progress
+        return this.keyframes[0][1] + adjust
+    }
+
+    set value(v: number) {
+        this.keyframes.push([
+            Interpolator.reltime() + this.config.duration,
+            v
+        ])
+    }
+}
+
+
+export var serializedMembers = new Map<GameElement, string[]>();
+export function serialized(target: any, key: string) {
+    console.log(target);
+
+    let map = serializedMembers.get(target);
+    if (!map) {
+        map = [];
+        serializedMembers.set(target, map);
+    }
+    map.push(key);
 }

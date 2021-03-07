@@ -1,7 +1,9 @@
 import { Ball, balls } from "../common/ball";
-import { paddle_count, updateCache } from "../common/helper";
-import { Paddle, paddles, removed } from "../common/paddle";
-import { BALL_RADIUS, PADDLE_MOVE_SPEED, PADDLE_SIZE, POLYGON_RADIUS_FAC, TICKRATE } from "../global";
+import { elements, removed_elements } from "../common/common";
+import { element_types } from "../common/el_types";
+import { player_count, updateCache } from "../common/helper";
+import { Player, players } from "../common/player";
+import { BALL_RADIUS, PADDLE_MOVE_SPEED, CIRCLE_RADIUS_FAC, TICKRATE } from "../global";
 
 var [canvas_sx, canvas_sy] = [0, 0];
 var paddle_vel = 0;
@@ -51,24 +53,21 @@ window.onload = async () => {
     }
     ws.onmessage = (ev) => {
         var j: any = JSON.parse(ev.data.toString())
-        j.balls.forEach((bn: Ball) => {
-            let ref = balls[bn.id]
-            if (!ref) { ref = new Ball(bn.id); }
-            ref.x = bn.x
-            ref.y = bn.y
-            ref.vx = bn.vx
-            ref.vy = bn.vy
+        j.updates.forEach((props: any) => {
+            let ref = elements[props.id]
+            if (!ref) { ref = new element_types[props.type](props.id); }
+            ref.props = props
         })
-        j.paddles.forEach((bn: Paddle) => {
-            let ref = paddles[bn.id]
-            if (!ref) { ref = new Paddle(bn.id) }
+        j.paddles.forEach((bn: Player) => {
+            let ref = players[bn.id]
+            if (!ref) { ref = new Player(bn.id) }
             ref.position = bn.position
             ref.nick = bn.nick
             ref.index = bn.index
             ref.score = bn.score
         })
         j.removed.forEach((id: string) => {
-            if (paddles[id]) paddles[id].destroy()
+            if (players[id]) players[id].destroy()
             if (balls[id]) balls[id].destroy()
         })
         you = j.you
@@ -80,7 +79,7 @@ window.onload = async () => {
 }
 
 export function tick() {
-    removed.forEach(e => removed.pop())
+    removed_elements.forEach(e => removed_elements.pop())
 
     paddle_pos += paddle_vel * PADDLE_MOVE_SPEED
     const packet_out = { position: paddle_pos }
@@ -97,10 +96,10 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     drawScoreboard(ctx)
 
     ctx.save()
-    var scale = ((canvas_sx > canvas_sy) ? canvas_sy : canvas_sx) / POLYGON_RADIUS_FAC / Object.values(paddles).length / 5;
+    var scale = ((canvas_sx > canvas_sy) ? canvas_sy : canvas_sx) / CIRCLE_RADIUS_FAC / Object.values(players).length / 5;
     ctx.transform(scale, 0, 0, scale, canvas_sx / 2, canvas_sy / 2);
-    if (paddles[you]) {
-        var rot = paddles[you].index / paddle_count * 2 * Math.PI
+    if (players[you]) {
+        var rot = players[you].index / player_count * 2 * Math.PI
         ctx.rotate(rot)
     }
 
@@ -108,18 +107,18 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     for (const id in balls) {
         if (!Object.prototype.hasOwnProperty.call(balls, id)) continue
         const b = balls[id];
-        b.draw(ctx)
+        b.client_draw(ctx)
     }
 
-    for (const id in paddles) {
-        if (!Object.prototype.hasOwnProperty.call(paddles, id)) continue
-        const p = paddles[id];
-        p.draw(ctx, you == id)
+    for (const id in players) {
+        if (!Object.prototype.hasOwnProperty.call(players, id)) continue
+        const p = players[id];
+        p.client_draw(ctx)
     }
 
     ctx.beginPath()
     ctx.strokeStyle = "#dd0000"
-    ctx.arc(0, 0, POLYGON_RADIUS_FAC * paddle_count * 2, 0, 2 * Math.PI);
+    ctx.arc(0, 0, CIRCLE_RADIUS_FAC * player_count * 2, 0, 2 * Math.PI);
     ctx.stroke()
 
 
@@ -130,7 +129,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 }
 
 export function drawScoreboard(ctx: CanvasRenderingContext2D) {
-    var scoreboard: [number, string][] = Object.values(paddles).map(p => [p.score, p.nick])
+    var scoreboard: [number, string][] = Object.values(players).map(p => [p.score, p.nick])
     scoreboard.sort((b, a) => a[0] - b[0])
     ctx.fillStyle = "white"
     ctx.font = "20px sans-serif"
