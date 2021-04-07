@@ -5,7 +5,7 @@ import { len, normalize_for } from "../helper"
 
 
 export class PlayerCell extends Cell {
-    
+
     public vx: number = 0
     public vy: number = 0
     public tx: number = 0
@@ -29,6 +29,21 @@ export class PlayerCell extends Cell {
         // console.log(`Target for ${this.name} (${this.id}) is (${this.tx}|${this.ty}). results in velocity of (${this.vx}|${this.vy}).`);
         this.x += this.vx
         this.y += this.vy
+    }
+
+    split() {
+        if (this.radius < 2 * GLOBAL_CONFIG.player_radius) return
+        this.radius *= Math.sqrt(0.5)
+        
+        var tdx = this.tx - this.x
+        var tdy = this.ty - this.y
+        var distance = GLOBAL_CONFIG.split_distance * this.radius
+        
+        var new_cell = new PlayerCell(this.game, this.name)
+        new_cell.x = this.x + normalize_for(tdx, tdy) * distance
+        new_cell.y = this.y + normalize_for(tdy, tdx) * distance
+        new_cell.radius = this.radius
+        this.game.add_cell(new_cell)
     }
 
 

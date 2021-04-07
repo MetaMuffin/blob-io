@@ -21,6 +21,11 @@ const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } =
             c.tx = j.x
             c.ty = j.y
         })
+    },
+    split: (ws, nick, j) => {
+        game.name_lookup[nick].forEach(c => {
+            c.split()
+        })
     }
 }
 
@@ -72,6 +77,7 @@ async function main() {
                 j = JSON.parse(ev.data.toString())
             } catch (e) { ws.close(); console.log("INVALID JSON") }
             if (!has_config) ws.send(JSON.stringify({ config: GLOBAL_CONFIG }))
+            has_config = true
             if (PACKET_TYPES[j.type])
                 PACKET_TYPES[j.type](ws, nick, j)
         }

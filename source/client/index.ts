@@ -42,6 +42,7 @@ window.onload = async () => {
         mousex = (ev.clientX - rect.left) * scaleX
         mousey = (ev.clientY - rect.top) * scaleY
     }
+    window.onclick = (ev: any) => split()
 
     resize()
 
@@ -52,8 +53,7 @@ window.onload = async () => {
         //var nick = prompt("Please choose a nickname", "an unnamed paddle") || "an unnamed paddle"
         var nick = `nickname#${Math.floor(Math.random() * 10000)}`
         ws.send(JSON.stringify({ type: "spawn", name: nick }))
-        document.body.removeChild(p)
-        redraw(ctx)
+        p.textContent = "awaiting spawn..."
     }
     ws.onclose = () => {
         document.body.innerHTML = "websocket closed :("
@@ -63,9 +63,13 @@ window.onload = async () => {
         var j: any = JSON.parse(ev.data.toString())
         if (j.view) view = j.view
         if (j.nick) nick = j.nick
-        if (j.config) CLIENT_CONFIG = j.config
+        if (j.config && !CLIENT_CONFIG) {
+            CLIENT_CONFIG = j.config
+            setInterval(() => tick(), 1000 / CLIENT_CONFIG.tickrate)
+            redraw(ctx)
+            document.body.removeChild(p)
+        }
     }
-    setInterval(() => tick(), 1000 / CLIENT_CONFIG.tickrate)
 }
 
 function tick() {
@@ -73,6 +77,12 @@ function tick() {
     targetx = mousex * imatrix[0] + mousey * imatrix[2] + imatrix[4];
     targety = mousex * imatrix[1] + mousey * imatrix[3] + imatrix[5];
     update_target()
+}
+
+function split() {
+    ws.send(JSON.stringify({
+        type: "split",
+    }))
 }
 
 export function update_target() {

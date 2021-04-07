@@ -14,6 +14,9 @@ export class Game {
 
     constructor() {
         this.quadtree = new Quadtree(new Box(0, 0, 0, 0))
+        for (let i = 0; i < 100; i++) {
+            this.spawn_food()
+        }
     }
 
     add_cell(c: Cell) {
@@ -54,7 +57,7 @@ export class Game {
         var rough = this.quadtree.query(box)
         return rough.filter(cell => {
             var d = distance(cell.x, cell.y, c.x, c.y)
-            return d <= GLOBAL_CONFIG.view_radius
+            return d <= GLOBAL_CONFIG.view_radius * c.radius
         })
     }
 

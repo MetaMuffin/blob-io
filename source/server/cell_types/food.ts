@@ -12,7 +12,9 @@ export class FoodCell extends Cell {
     }
 
     on_eat(other: Cell): void { }
-    on_eaten(eater: Cell): void { }
+    on_eaten(eater: Cell): void {
+        this.game.spawn_food()
+    }
     type_tick(near_cells: Cell[]) {}
 
     get props(): any {
