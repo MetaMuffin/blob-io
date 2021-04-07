@@ -1,13 +1,5 @@
-import { Ball } from "../common/ball";
-import { elements, removed_elements } from "../common/common";
-import { balls, element_types, players, updateCache } from "../common/el_types";
-import { cache } from "../common/helper";
-import { Player } from "../common/player";
-import { BALL_RADIUS, PADDLE_MOVE_SPEED, CIRCLE_RADIUS_FAC, TICKRATE } from "../global";
 
 var [canvas_sx, canvas_sy] = [0, 0];
-var paddle_vel = 0;
-var paddle_pos = 0;
 var ws: WebSocket;
 var you: string;
 
@@ -26,12 +18,8 @@ window.onload = async () => {
 
     window.onkeydown = (ev: KeyboardEvent) => {
         if (ev.repeat) return
-        if (ev.key == "a" && paddle_vel > -1) paddle_vel += -1
-        if (ev.key == "d" && paddle_vel < 1) paddle_vel += 1
     }
     window.onkeyup = (ev: KeyboardEvent) => {
-        if (ev.key == "a") paddle_vel -= -1
-        if (ev.key == "d") paddle_vel -= 1
         ev.preventDefault()
     }
 
@@ -42,7 +30,8 @@ window.onload = async () => {
     p.textContent = "websocket connecting..."
     document.body.appendChild(p)
     ws.onopen = () => {
-        var nick = prompt("Please choose a nickname", "an unnamed paddle") || "an unnamed paddle"
+        //var nick = prompt("Please choose a nickname", "an unnamed paddle") || "an unnamed paddle"
+        var nick = `nickname#${Math.floor(Math.random() * 10000)}`
         ws.send(JSON.stringify({ nick }))
         document.body.removeChild(p)
         redraw(ctx)
@@ -53,36 +42,12 @@ window.onload = async () => {
     }
     ws.onmessage = (ev) => {
         var j: any = JSON.parse(ev.data.toString())
-        j.updates.forEach((props: any) => {
-            let ref = elements[props.id]
-            if (!ref) { ref = new element_types[props.type](props.id); }
-            ref.props = props
-        })
-        j.paddles.forEach((bn: Player) => {
-            let ref = players[bn.id]
-            if (!ref) { ref = new Player(bn.id) }
-            ref.position = bn.position
-            ref.nick = bn.nick
-            ref.index = bn.index
-            ref.score = bn.score
-        })
-        j.removed.forEach((id: string) => {
-            if (players[id]) players[id].destroy()
-            if (balls[id]) balls[id].destroy()
-        })
-        you = j.you
-    }
 
-    setInterval(() => {
-        tick()
-    }, 1000 / TICKRATE)
+    }
 }
 
 export function tick() {
-    removed_elements.forEach(e => removed_elements.pop())
-
-    paddle_pos += paddle_vel * PADDLE_MOVE_SPEED
-    const packet_out = { position: paddle_pos }
+    var packet_out = {}
     ws.send(JSON.stringify(packet_out))
 }
 
@@ -92,49 +57,11 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
-    updateCache()
-    drawScoreboard(ctx)
-
-    ctx.save()
-    var scale = ((canvas_sx > canvas_sy) ? canvas_sy : canvas_sx) / CIRCLE_RADIUS_FAC / Object.values(players).length / 5;
-    ctx.transform(scale, 0, 0, scale, canvas_sx / 2, canvas_sy / 2);
-    if (players[you]) {
-        var rot = players[you].index / cache.player_count * 2 * Math.PI
-        ctx.rotate(rot)
-    }
-
-    ctx.fillStyle = "red"
-    for (const id in balls) {
-        if (!Object.prototype.hasOwnProperty.call(balls, id)) continue
-        const b = balls[id];
-        b.client_draw(ctx)
-    }
-
-    for (const id in players) {
-        if (!Object.prototype.hasOwnProperty.call(players, id)) continue
-        const p = players[id];
-        p.client_draw(ctx)
-    }
-
-    ctx.beginPath()
-    ctx.strokeStyle = "#dd0000"
-    ctx.arc(0, 0, CIRCLE_RADIUS_FAC * cache.player_count * 2, 0, 2 * Math.PI);
-    ctx.stroke()
-
 
     ctx.restore()
 
 
     requestAnimationFrame(() => redraw(ctx));
-}
-
-export function drawScoreboard(ctx: CanvasRenderingContext2D) {
-    var scoreboard: [number, string][] = Object.values(players).map(p => [p.score, p.nick])
-    scoreboard.sort((b, a) => a[0] - b[0])
-    ctx.fillStyle = "white"
-    ctx.font = "20px sans-serif"
-    ctx.fillText("Multipong Scoreboard:", 20, 30);
-    scoreboard.forEach((e, i) => ctx.fillText(`${i + 1}. ${e[0]} ${e[1]}`, 20, i * 20 + 60))
 }
 
 
