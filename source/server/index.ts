@@ -8,10 +8,21 @@ import https from "https"
 import expressWs from "express-ws";
 import { GLOBAL_CONFIG } from "../global";
 import { Game } from "./game";
+import { normalize_for } from "./helper";
 
-var websockets: { [key: string]: any } = { }
+var websockets: { [key: string]: any } = {}
 var game: Game = new Game()
 
+
+const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } = {
+    target: (ws, nick, j) => {
+        if (typeof j.y != "number" || typeof j.x != "number") return console.log("kkekekek");
+        game.name_lookup[nick].forEach(c => {
+            c.tx = j.x
+            c.ty = j.y
+        })
+    }
+}
 
 async function main() {
     const app = Express();
@@ -46,18 +57,23 @@ async function main() {
     app_ws.ws("/ws/:nickname", function (ws, req) {
         console.log("somebody connected");
         var nick = req.params.nickname || "unnamed"
+        var nick_o = nick
         while (websockets[nick]) {
-            nick = `unnamed#${Math.floor(Math.random() * 10000)}`
+            nick = `${nick_o}d#${Math.floor(Math.random() * 10000)}`
         }
         websockets[nick] = ws
         game.spawn_player(nick)
+        var has_config = false
 
 
         ws.onmessage = (ev) => {
-            var j;
+            var j: any;
             try {
                 j = JSON.parse(ev.data.toString())
             } catch (e) { ws.close(); console.log("INVALID JSON") }
+            if (!has_config) ws.send(JSON.stringify({ config: GLOBAL_CONFIG }))
+            if (PACKET_TYPES[j.type])
+                PACKET_TYPES[j.type](ws, nick, j)
         }
         ws.onclose = () => {
             delete websockets[nick]
@@ -82,10 +98,9 @@ function tick() {
     Object.entries(websockets).forEach(([nick, ws]) => {
         var view = game.get_player_view(nick).map(c => c.props)
         try {
-            ws.send(JSON.stringify({ view }))
+            ws.send(JSON.stringify({ view, nick }))
         } catch (e) {
             console.log("Caught some errors of the shitty websocket library");
-
         }
     })
 }

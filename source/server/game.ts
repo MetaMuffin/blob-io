@@ -1,5 +1,7 @@
 import { GLOBAL_CONFIG } from "../global";
 import { Cell } from "./cell";
+import { FoodCell } from "./cell_types/food";
+import { PlayerCell } from "./cell_types/player";
 import { distance } from "./helper";
 import { Box, Quadtree } from "./quadtree";
 
@@ -7,7 +9,7 @@ import { Box, Quadtree } from "./quadtree";
 export class Game {
     public cells: Cell[] = []
     public cell_lookup: { [key: string]: Cell } = {}
-    public name_lookup: { [key: string]: Cell[] } = {}
+    public name_lookup: { [key: string]: PlayerCell[] } = {}
     public quadtree: Quadtree
 
     constructor() {
@@ -18,8 +20,10 @@ export class Game {
         console.log(`Add cell ${c.id}`);
         this.cells.push(c)
         this.cell_lookup[c.id] = c
-        if (c.name && !this.name_lookup[c.name]) this.name_lookup[c.name] = []
-        if (c.name) this.name_lookup[c.name].push(c)
+        if (c instanceof PlayerCell) {
+            if (!this.name_lookup[c.name]) this.name_lookup[c.name] = []
+            this.name_lookup[c.name].push(c)
+        }
     }
     remove_cell(c: Cell) {
         console.log(`Remove cell ${c.id}`);
@@ -27,7 +31,7 @@ export class Game {
         console.log(si);
         this.cells.splice(si, 1)
         delete this.cell_lookup[c.id]
-        if (c.name) {
+        if (c instanceof PlayerCell) {
             let si = this.name_lookup[c.name].findIndex(a => a === c)
             console.log(si);
             this.name_lookup[c.name].splice(si, 1)
@@ -68,7 +72,14 @@ export class Game {
 
     spawn_player(name: string) {
         console.log("Spawn player: " + name);
-        var cell = new Cell("player", name)
+        var cell = new PlayerCell(this, name)
+        cell.x = GLOBAL_CONFIG.map_size * Math.random()
+        cell.y = GLOBAL_CONFIG.map_size * Math.random()
+        this.add_cell(cell)
+    }
+
+    spawn_food() {
+        var cell = new FoodCell(this)
         cell.x = GLOBAL_CONFIG.map_size * Math.random()
         cell.y = GLOBAL_CONFIG.map_size * Math.random()
         this.add_cell(cell)

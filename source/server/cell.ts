@@ -1,45 +1,37 @@
 import { Field } from "serialize-ts";
 import { GLOBAL_CONFIG } from "../global";
 import { CellType } from "../types";
-import { id } from "./helper";
+import { Game } from "./game";
+import { id, len, normalize_for } from "./helper";
 
 
 
 
-export class Cell {
+export abstract class Cell {
     public id: string = id();
     public x: number = 0
     public y: number = 0
-    public vx: number = 0
-    public vy: number = 0
     public radius: number = 0
-    public name?: string
-    public type: CellType
 
-    constructor(type: CellType, name?: string) {
-        this.type = type
-        this.name = name
-        if (type == "food") this.radius = GLOBAL_CONFIG.food_radius
-        else if (type == "player") this.radius = GLOBAL_CONFIG.player_radius
+
+    protected game: Game
+
+    constructor(game: Game) {
+        this.game = game
     }
-
+    
     tick(near_cells: Cell[]) {
-        this.x += this.vx
-        this.y += this.vy
+        this.type_tick(near_cells)
+        this.eat_tick(near_cells)
+    }
+
+    eat_tick(near_cells: Cell[]) {
 
     }
 
-    get props(): any {
-        return {
-            id: this.id,
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy,
-            radius: this.radius,
-            type: this.type,
-            name: this.name,
-        }
-    }
+    abstract type_tick(near_cells: Cell[]): void
+    abstract on_eat(other: Cell): void
+    abstract on_eaten(eater: Cell): void
+
+    abstract get props(): any
 }
-
