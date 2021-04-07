@@ -7,8 +7,9 @@ var ws: WebSocket;
 var mousex: number, mousey: number;
 var view: ICell[] = []
 var nick: string = ""
-var targetx = 0;
-var targety = 0;
+var targetx = 50;
+var targety = 50;
+var do_target_update = true;
 
 var CLIENT_CONFIG: any
 
@@ -30,6 +31,8 @@ window.onload = async () => {
 
     window.onkeydown = (ev: KeyboardEvent) => {
         if (ev.repeat) return
+        if (ev.code == "KeyW") split(CLIENT_CONFIG.player_radius, false)
+        if (ev.code == "KeyX") do_target_update = !do_target_update
     }
     window.onkeyup = (ev: KeyboardEvent) => {
         ev.preventDefault()
@@ -42,7 +45,7 @@ window.onload = async () => {
         mousex = (ev.clientX - rect.left) * scaleX
         mousey = (ev.clientY - rect.top) * scaleY
     }
-    window.onclick = (ev: any) => split()
+    window.onclick = (ev: any) => split(100000, true)
 
     resize()
 
@@ -57,7 +60,7 @@ window.onload = async () => {
     }
     ws.onclose = () => {
         document.body.innerHTML = "websocket closed :("
-        window.location.reload()
+        setTimeout(() => window.location.reload(), 1000)
     }
     ws.onmessage = (ev) => {
         var j: any = JSON.parse(ev.data.toString())
@@ -73,15 +76,17 @@ window.onload = async () => {
 }
 
 function tick() {
+    if (!do_target_update) return
     var imatrix = inverted_transform_matrix
     targetx = mousex * imatrix[0] + mousey * imatrix[2] + imatrix[4];
     targety = mousex * imatrix[1] + mousey * imatrix[3] + imatrix[5];
     update_target()
 }
 
-function split() {
+function split(r: number, owned: boolean) {
     ws.send(JSON.stringify({
         type: "split",
+        r, owned
     }))
 }
 
@@ -116,6 +121,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 
     for (const cell of view) {
         ctx.fillStyle = cell.type == "player" ? "#f00" : "#0f0"
+        if (cell.name == nick) ctx.fillStyle = "#f0f"
         ctx.beginPath()
         ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2)
         ctx.fill()

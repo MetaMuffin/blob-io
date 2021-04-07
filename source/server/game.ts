@@ -31,12 +31,12 @@ export class Game {
     remove_cell(c: Cell) {
         console.log(`Remove cell ${c.id}`);
         let si = this.cells.findIndex(a => a === c)
-        console.log(si);
-        this.cells.splice(si, 1)
+        if (si) this.cells.splice(si, 1)
+        else console.log("an error happend somewhere");
         delete this.cell_lookup[c.id]
         if (c instanceof PlayerCell) {
-            let si = this.name_lookup[c.name].findIndex(a => a === c)
-            console.log(si);
+            let si = this.name_lookup[c.name]?.findIndex(a => a === c)
+            if (!si) return
             this.name_lookup[c.name].splice(si, 1)
             if (this.name_lookup[c.name].length == 0) delete this.name_lookup[c.name]
         }

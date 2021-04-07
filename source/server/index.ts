@@ -13,20 +13,26 @@ import { normalize_for } from "./helper";
 var websockets: { [key: string]: any } = {}
 var game: Game = new Game()
 
+function send_err(ws: any, message: any) {
+    ws.send(JSON.stringify({ error: message }))
+    // ws.close()
+}
 
 const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } = {
     target: (ws, nick, j) => {
-        if (typeof j.y != "number" || typeof j.x != "number") return console.log("kkekekek");
-        game.name_lookup[nick].forEach(c => {
+        if (typeof j.y != "number" || typeof j.x != "number") return send_err(ws, "invalid x or y target position");
+        game.name_lookup[nick]?.forEach(c => {
             c.tx = j.x
             c.ty = j.y
         })
     },
     split: (ws, nick, j) => {
         game.name_lookup[nick].forEach(c => {
-            c.split()
+            if (typeof j.r != "number") return send_err(ws, "invalid eject radius")
+            c.split(j.r, !!j.owned)
         })
-    }
+    },
+    ping: (ws, nick, j) => { ws.send(JSON.stringify({ pong: true })) },
 }
 
 async function main() {
@@ -83,7 +89,7 @@ async function main() {
         }
         ws.onclose = () => {
             delete websockets[nick]
-            game.name_lookup[nick].forEach(c => game.remove_cell(c))
+            game.name_lookup[nick]?.forEach(c => game.remove_cell(c))
             console.log(`somebody disconnected ${nick}`);
         }
     })
