@@ -9,8 +9,7 @@ import expressWs from "express-ws";
 import { GLOBAL_CONFIG } from "../global";
 import { Game } from "./game";
 
-
-var websockets: any[] = []
+var websockets: { [key: string]: any } = { }
 var game: Game = new Game()
 
 
@@ -44,9 +43,15 @@ async function main() {
         res.sendFile(join(__dirname, "../../public/favicon.ico"));
     });
 
-    app_ws.ws("/ws", function (ws, req) {
-        console.log("CONNECT");
-        websockets.push(ws)
+    app_ws.ws("/ws/:nickname", function (ws, req) {
+        console.log("somebody connected");
+        var nick = req.params.nickname || "unnamed"
+        while (websockets[nick]) {
+            nick = `unnamed#${Math.floor(Math.random() * 10000)}`
+        }
+        websockets[nick] = ws
+        game.spawn_player(nick)
+
 
         ws.onmessage = (ev) => {
             var j;
@@ -55,7 +60,9 @@ async function main() {
             } catch (e) { ws.close(); console.log("INVALID JSON") }
         }
         ws.onclose = () => {
-            websockets.splice(websockets.findIndex(e => e == ws))
+            delete websockets[nick]
+            game.name_lookup[nick].forEach(c => game.remove_cell(c))
+            console.log(`somebody disconnected ${nick}`);
         }
     })
 
@@ -72,6 +79,15 @@ async function main() {
 
 function tick() {
     game.tick()
+    Object.entries(websockets).forEach(([nick, ws]) => {
+        var view = game.get_player_view(nick).map(c => c.props)
+        try {
+            ws.send(JSON.stringify({ view }))
+        } catch (e) {
+            console.log("Caught some errors of the shitty websocket library");
+
+        }
+    })
 }
 
 main();

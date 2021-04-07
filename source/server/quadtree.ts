@@ -12,13 +12,10 @@ export class Box {
         return (x >= this.x1 && x < this.x2) && (y >= this.y1 && y < this.y2)
     }
     intersects(other: Box): boolean {
-        return (
-            (this.x1 > other.x1 && this.x1 < other.x2)
-            || (this.x2 < other.x2 && this.x2 > other.x1)
-        ) && (
-                (this.y1 > other.y1 && this.y1 < other.y2)
-                || (this.y2 < other.y2 && this.y2 > other.y1)
-            );
+        return this.x1 < other.x2
+            && this.x2 > other.x1
+            && this.y1 < other.y2
+            && this.y2 > other.y1
     }
     get center_x(): number {
         return (this.x1 + this.x2) * 0.5
