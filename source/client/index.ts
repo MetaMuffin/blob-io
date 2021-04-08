@@ -21,6 +21,8 @@ var do_view_update = true;
 var viewx = 0;
 var viewy = 0;
 
+var last_frame = performance.now()
+
 var CLIENT_CONFIG: any
 
 var inverted_transform_matrix: number[]
@@ -138,6 +140,9 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
+    var now = performance.now()
+    var delta = now - last_frame
+    last_frame = now
 
     var cx, cy, view_dist
     if (spectator) {
@@ -152,8 +157,8 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     }
 
     if (do_view_update) {
-        viewx += (cx - viewx) * 0.02
-        viewy += (cy - viewy) * 0.02
+        viewx += (cx - viewx) * 0.002 * delta
+        viewy += (cy - viewy) * 0.002 * delta
     }
 
     var zoom = Math.min(canvas_sx, canvas_sy) / view_dist
