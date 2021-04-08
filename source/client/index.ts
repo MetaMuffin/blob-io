@@ -151,8 +151,9 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         view_dist = spectator_meta?.r || 0
     } else {
         var owned_cells = view.filter(c => c.name == nick)
-        cx = owned_cells.reduce((a, v) => a + v.x, 0) / owned_cells.length
-        cy = owned_cells.reduce((a, v) => a + v.y, 0) / owned_cells.length
+        var d = owned_cells.reduce((a,v) => a + v.radius ** 2, 0) * owned_cells.length
+        cx = owned_cells.reduce((a, v) => a + v.x * v.radius ** 2, 0) / d
+        cy = owned_cells.reduce((a, v) => a + v.y * v.radius ** 2, 0) / d
         view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius), 0) * CLIENT_CONFIG.view_radius
         if (Number.isNaN(cx)) cx = 0
         if (Number.isNaN(cy)) cy = 0

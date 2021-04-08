@@ -25,8 +25,12 @@ export class Game {
         this.quadtree.insert(c)
         if (c instanceof PlayerCell) {
             if (!this.name_lookup.has(c.name)) this.name_lookup.set(c.name, [])
-            this.name_lookup.get(c.name)?.push(c)
+            var l = this.name_lookup.get(c.name)
+            if (!l) throw new Error("This should not happen at all");
+            console.log(`there were ${l.length} cells for this player already`);
+            l.push(c)
         }
+
     }
     remove_cell(c: Cell) {
         if (VERBOSE) console.log(`Remove cell ${c.id}`);
@@ -36,11 +40,15 @@ export class Game {
         this.quadtree.remove(c)
         if (c instanceof PlayerCell) {
             var l = this.name_lookup.get(c.name)
-            let si = l?.findIndex(a => a === c)
-            if (!si) return
-            l?.splice(si, 1)
-            if (l?.length == 0) this.name_lookup.delete(c.name)
+            if (!l) throw new Error("Could not remove cell from name lookup map");
+            console.log(`there were ${l.length} cells for this player before.`);
+            let si = l.findIndex(a => a === c)
+            if (si == -1) throw new Error("Could not remove cell from name lookup map");
+            l.splice(si, 1)
+            console.log(`now there are ${this.name_lookup.get(c.name)?.length} left`);
+            if (l.length == 0) this.name_lookup.delete(c.name)
         }
+
     }
 
     public tick() {

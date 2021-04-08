@@ -70,7 +70,7 @@ async function main() {
         var nick = req.params.nickname || "unnamed"
         var nick_o = nick
         while (player_websockets[nick]) {
-            nick = `${nick_o}d#${Math.floor(Math.random() * 10000)}`
+            nick = `${nick_o}#${Math.floor(Math.random() * 10000)}`
         }
         if (VERBOSE) console.log(`${nick} connected`);
         player_websockets[nick] = ws
@@ -89,8 +89,10 @@ async function main() {
         }
         ws.onclose = () => {
             delete player_websockets[nick]
-            game.name_lookup.get(nick)?.forEach(c => game.remove_cell(c))
-            if (VERBOSE) console.log(`${nick} disconnected`);
+            if (VERBOSE) console.log(`${nick} disconnected with ${game.name_lookup.get(nick)?.length} cells`);
+            [...game.name_lookup.get(nick) || []].forEach(c => {
+                game.remove_cell(c)
+            })
         }
     })
 
