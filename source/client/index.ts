@@ -20,6 +20,7 @@ var do_view_update = true;
 
 var viewx = 0;
 var viewy = 0;
+var viewzoom = 1;
 
 var last_frame = performance.now()
 
@@ -69,6 +70,9 @@ window.onload = async () => {
     window.onclick = (ev: any) => {
         if (spectator) update_target()
         else split(100000, true)
+    }
+    window.onmousewheel = (ev: any) => {
+        spectator_view_radius *= 1 + 0.2 * Math.sign(ev.deltaY)
     }
     resize()
 
@@ -148,10 +152,10 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     if (spectator) {
         cx = (spectator_meta?.x || 0)
         cy = (spectator_meta?.y || 0)
-        view_dist = spectator_meta?.r || 0
+        view_dist = spectator_meta?.r || 1
     } else {
         var owned_cells = view.filter(c => c.name == nick)
-        var d = owned_cells.reduce((a,v) => a + v.radius ** 2, 0) * owned_cells.length
+        var d = owned_cells.reduce((a, v) => a + v.radius ** 2, 0) * owned_cells.length
         cx = owned_cells.reduce((a, v) => a + v.x * v.radius ** 2, 0) / d
         cy = owned_cells.reduce((a, v) => a + v.y * v.radius ** 2, 0) / d
         view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius), 0) * CLIENT_CONFIG.view_radius
@@ -165,8 +169,11 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     }
 
     var zoom = Math.min(canvas_sx, canvas_sy) / view_dist
+    if (Number.isNaN(zoom)) zoom = 1;
+    viewzoom += (zoom - viewzoom) * 0.02 * delta
+
     ctx.save()
-    ctx.transform(zoom, 0, 0, zoom, -viewx * zoom + canvas_sx / 2, -viewy * zoom + canvas_sy / 2)
+    ctx.transform(viewzoom, 0, 0, viewzoom, -viewx * viewzoom + canvas_sx / 2, -viewy * viewzoom + canvas_sy / 2)
 
     var tm = ctx.getTransform()
     var itm = tm.inverse()
