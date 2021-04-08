@@ -27,7 +27,7 @@ const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } =
         })
     },
     split: (ws, nick, j) => {
-        game.name_lookup[nick].forEach(c => {
+        [...game.name_lookup[nick]].forEach(c => {
             if (typeof j.r != "number") return send_err(ws, "invalid eject radius")
             c.split(j.r, !!j.owned)
         })

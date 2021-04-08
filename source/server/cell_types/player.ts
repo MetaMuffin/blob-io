@@ -1,4 +1,4 @@
-import { GLOBAL_CONFIG } from "../../global"
+import { GLOBAL_CONFIG, VERBOSE } from "../../global"
 import { Cell } from "../cell"
 import { Game } from "../game"
 import { distance, len, normalize_for } from "../helper"
@@ -49,8 +49,10 @@ export class PlayerCell extends Cell {
 
     split(eject_radius: number, keep_owner: boolean) {
         if (this.radius < Math.sqrt(2) * GLOBAL_CONFIG.player_radius) return
-        eject_radius = Math.min(this.radius / 2, Math.max(GLOBAL_CONFIG.player_radius, eject_radius))
+        eject_radius = Math.min(this.radius / Math.sqrt(2), Math.max(GLOBAL_CONFIG.player_radius, eject_radius))
+        if (VERBOSE) console.log(`Cell with radius ${this.radius} (m=${this.radius**2}) is trying to eject cell of radius ${eject_radius} (m=${eject_radius**2}).`);
         this.radius = Math.sqrt(this.radius ** 2 - eject_radius ** 2)
+        if (VERBOSE) console.log(`Left over radius is ${this.radius} (m=${this.radius**2})`);
 
         var tdx = this.tx - this.x
         var tdy = this.ty - this.y

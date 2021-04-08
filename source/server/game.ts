@@ -1,4 +1,4 @@
-import { GLOBAL_CONFIG } from "../global";
+import { GLOBAL_CONFIG, VERBOSE } from "../global";
 import { Cell } from "./cell";
 import { FoodCell } from "./cell_types/food";
 import { PlayerCell } from "./cell_types/player";
@@ -20,7 +20,7 @@ export class Game {
     }
 
     add_cell(c: Cell) {
-        console.log(`Add cell ${c.id}`);
+        if (VERBOSE) console.log(`Add cell ${c.id}`);
         this.cells.push(c)
         this.cell_lookup[c.id] = c
         if (c instanceof PlayerCell) {
@@ -29,7 +29,7 @@ export class Game {
         }
     }
     remove_cell(c: Cell) {
-        console.log(`Remove cell ${c.id}`);
+        if (VERBOSE) console.log(`Remove cell ${c.id}`);
         let si = this.cells.findIndex(a => a === c)
         if (si) this.cells.splice(si, 1)
         else console.log("an error happend somewhere");
@@ -74,7 +74,7 @@ export class Game {
     }
 
     spawn_player(name: string) {
-        console.log("Spawn player: " + name);
+        if (VERBOSE) console.log("Spawn player: " + name);
         var cell = new PlayerCell(this, name)
         cell.x = GLOBAL_CONFIG.map_size * Math.random()
         cell.y = GLOBAL_CONFIG.map_size * Math.random()
