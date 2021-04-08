@@ -13,7 +13,7 @@ export class Game {
 
     constructor() {
         this.quadtree = new Quadtree(new Box(0, 0, GLOBAL_CONFIG.map_size, GLOBAL_CONFIG.map_size))
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < GLOBAL_CONFIG.natural_food_count; i++) {
             this.spawn_food()
         }
     }
@@ -27,7 +27,7 @@ export class Game {
             if (!this.name_lookup.has(c.name)) this.name_lookup.set(c.name, [])
             var l = this.name_lookup.get(c.name)
             if (!l) throw new Error("This should not happen at all");
-            console.log(`there were ${l.length} cells for this player already`);
+            // console.log(`there were ${l.length} cells for this player already`);
             l.push(c)
         }
 
@@ -41,14 +41,19 @@ export class Game {
         if (c instanceof PlayerCell) {
             var l = this.name_lookup.get(c.name)
             if (!l) throw new Error("Could not remove cell from name lookup map");
-            console.log(`there were ${l.length} cells for this player before.`);
+            // console.log(`there were ${l.length} cells for this player before.`);
             let si = l.findIndex(a => a === c)
             if (si == -1) throw new Error("Could not remove cell from name lookup map");
             l.splice(si, 1)
-            console.log(`now there are ${this.name_lookup.get(c.name)?.length} left`);
+            // console.log(`now there are ${this.name_lookup.get(c.name)?.length} left`);
             if (l.length == 0) this.name_lookup.delete(c.name)
         }
-
+    }
+    update_cell_start(c: Cell) {
+        this.quadtree.remove(c)
+    }
+    update_cell_end(c: Cell) {
+        this.quadtree.insert(c)
     }
 
     public tick() {
@@ -99,6 +104,8 @@ export class Game {
         var cell = new FoodCell(this)
         cell.x = GLOBAL_CONFIG.map_size * Math.random()
         cell.y = GLOBAL_CONFIG.map_size * Math.random()
+        cell.radius = GLOBAL_CONFIG.natural_food_radius
+        cell.natural = true
         this.add_cell(cell)
     }
 }

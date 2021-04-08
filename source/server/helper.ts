@@ -1,7 +1,9 @@
 
-
+var id_counter = 0
 export function id(): string {
-    return Math.random().toString().substring(2)
+    id_counter += 1
+    id_counter %= Number.MAX_SAFE_INTEGER - 10
+    return id_counter.toString(16)
 }
 
 export function distance(x1: number, y1: number, x2: number, y2: number): number {

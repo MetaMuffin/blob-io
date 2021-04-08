@@ -23,9 +23,11 @@ export class PlayerCell extends Cell {
     on_eat(other: Cell): void { }
     on_eaten(eater: Cell): void { }
     type_tick(near_cells: Cell[]) {
+        this.game.update_cell_start(this)
+
         var tdx = this.tx - this.x
         var tdy = this.ty - this.y
-        var speed = Math.min(1, len(tdx, tdy))
+        var speed = Math.min(1, len(tdx, tdy)) * GLOBAL_CONFIG.base_speed / this.radius
         this.vx = normalize_for(tdx, tdy) * speed
         this.vy = normalize_for(tdy, tdx) * speed
         // console.log(`Target for ${this.name} (${this.id}) is (${this.tx}|${this.ty}). results in velocity of (${this.vx}|${this.vy}).`);
@@ -50,6 +52,8 @@ export class PlayerCell extends Cell {
         if (this.y - this.radius < 0) this.y -= -Math.abs(this.vy)
         if (this.x + this.radius > GLOBAL_CONFIG.map_size) this.x -= Math.abs(this.vx)
         if (this.y + this.radius > GLOBAL_CONFIG.map_size) this.y -= Math.abs(this.vy)
+        
+        this.game.update_cell_end(this)
     }
 
     split(eject_radius: number, keep_owner: boolean) {

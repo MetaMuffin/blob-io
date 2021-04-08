@@ -68,22 +68,30 @@ async function main() {
 
     app_ws.ws("/play/:nickname", function (ws, req) {
         var nick = req.params.nickname || "unnamed"
-        var nick_o = nick
-        while (player_websockets[nick]) {
-            nick = `${nick_o}#${Math.floor(Math.random() * 10000)}`
-        }
-        if (VERBOSE) console.log(`${nick} connected`);
-        player_websockets[nick] = ws
-        game.spawn_player(nick)
         var has_config = false
+        var spawned = false
+        
+        const on_open = () => {
+            var nick_o = nick
+            while (player_websockets[nick]) {
+                nick = `${nick_o}#${Math.floor(Math.random() * 10000)}`
+            }
+            if (VERBOSE) console.log(`${nick} connected`);
+            player_websockets[nick] = ws
+            game.spawn_player(nick)
+        }
 
         ws.onmessage = (ev) => {
             var j: any;
             try {
                 j = JSON.parse(ev.data.toString())
             } catch (e) { ws.close(); console.log("INVALID JSON") }
+            
             if (!has_config) ws.send(JSON.stringify({ config: GLOBAL_CONFIG }))
             has_config = true
+            if (!spawned) on_open()
+            spawned = true
+
             if (PACKET_TYPES[j.type])
                 PACKET_TYPES[j.type](ws, nick, j)
         }

@@ -27,6 +27,7 @@ export abstract class Cell {
     }
 
     eat_tick(near_cells: Cell[]) {
+        near_cells = [...near_cells]
         for (const c of near_cells) {
             //@ts-ignore
             if (c.name && this.name && c.name == this.name && c.id != this.id) {

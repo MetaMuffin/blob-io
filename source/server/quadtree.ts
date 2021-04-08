@@ -41,7 +41,6 @@ const QUAD_MAX_NODES = 100
 export class Quadtree {
     private box: Box
 
-    private nodes: Cell[] = []
 
     private split: boolean = false
     private tl?: Quadtree
@@ -49,7 +48,8 @@ export class Quadtree {
     private bl?: Quadtree
     private br?: Quadtree
 
-    private nodes_included: Cell[] = []
+    private nodes_intersecting: Cell[] = []
+    private nodes_contained: Cell[] = []
 
     constructor(box: Box) {
         this.box = box
@@ -59,26 +59,26 @@ export class Quadtree {
         if (!depth) depth = 0
         if (!this.box.intersects_circle(node.x, node.y, node.radius)) return false
         if (this.split) {
-            var insert_success = [
-                this.tl?.insert(node, depth + 1),
-                this.tr?.insert(node, depth + 1),
-                this.bl?.insert(node, depth + 1),
-                this.br?.insert(node, depth + 1)
-            ]
-            console.log(`${depth} ${insert_success.join(",")}`);
+            this.tl?.insert(node, depth + 1)
+            this.tr?.insert(node, depth + 1)
+            this.bl?.insert(node, depth + 1)
+            this.br?.insert(node, depth + 1)
+            return true
         }
-        this.nodes.push(node)
-        if (this.box.contains(node.x, node.y)) this.nodes_included.push(node)
-        if (this.nodes_included.length > QUAD_MAX_NODES) {
+        this.nodes_intersecting.push(node)
+        if (this.box.contains(node.x, node.y)) this.nodes_contained.push(node)
+        if (this.nodes_contained.length > QUAD_MAX_NODES) {
             this.split = true
             var cx = this.box.center_x
-            var cy = this.box.center_x
+            var cy = this.box.center_y
             this.tl = new Quadtree(new Box(this.box.x1, this.box.y1, cx, cy))
             this.tr = new Quadtree(new Box(cx, this.box.y1, this.box.x2, cy))
             this.bl = new Quadtree(new Box(this.box.x1, cy, cx, this.box.y2))
             this.br = new Quadtree(new Box(cx, cy, this.box.x2, this.box.y2))
-            this.nodes.forEach(n => this.insert(n, depth))
-            this.nodes = []
+            console.log(this.nodes_contained.length);
+            this.nodes_intersecting.forEach(n => this.insert(n, depth))
+            this.nodes_intersecting = []
+            this.nodes_contained = []
         }
         return true
     }
@@ -86,11 +86,12 @@ export class Quadtree {
     remove(node: Cell): number {
         if (!this.box.intersects_circle(node.x, node.y, node.radius)) return 0
         if (!this.split) {
-            var si = this.nodes.findIndex(c => c.id == node.id)
-            var sii = this.nodes_included.findIndex(c => c.id == node.id)
+            var si = this.nodes_intersecting.findIndex(c => c.id == node.id)
+            var sii = this.nodes_contained.findIndex(c => c.id == node.id)
             if (si == -1) return 0
-            this.nodes.splice(si, 1)
-            this.nodes_included.splice(sii, 1)
+            this.nodes_intersecting.splice(si, 1)
+            if (sii == -1) return 0
+            this.nodes_contained.splice(sii, 1)
             return 1
         } else {
             return (this.tl?.remove(node) || 0)
@@ -101,7 +102,7 @@ export class Quadtree {
     }
 
     query(selection: Box): Cell[] {
-        if (!this.split) return this.nodes
+        if (!this.split) return this.nodes_intersecting
         if (!this.box.intersects(selection)) return []
         const e = () => { throw new Error("ekekkekekek"); }
         return [
@@ -116,10 +117,10 @@ export class Quadtree {
         if (this.split) {
             this.tl?.for_each_group(f)
             this.tr?.for_each_group(f)
-            this.tl?.for_each_group(f)
-            this.tl?.for_each_group(f)
+            this.bl?.for_each_group(f)
+            this.br?.for_each_group(f)
         } else {
-            f(this.nodes_included)
+            f(this.nodes_contained)
         }
     }
 
@@ -130,7 +131,7 @@ export class Quadtree {
             this.tl?.for_each(f)
             this.tl?.for_each(f)
         } else {
-            this.nodes.forEach(c => f(c))
+            this.nodes_intersecting.forEach(c => f(c))
         }
     }
 }

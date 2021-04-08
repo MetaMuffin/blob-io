@@ -5,6 +5,7 @@ import { len, normalize_for } from "../helper"
 
 
 export class FoodCell extends Cell {
+    public natural: boolean = false
 
     constructor(game: Game) {
         super(game)
@@ -13,7 +14,7 @@ export class FoodCell extends Cell {
 
     on_eat(other: Cell): void { }
     on_eaten(eater: Cell): void {
-        this.game.spawn_food()
+        if (this.natural) this.game.spawn_food()
     }
     type_tick(near_cells: Cell[]) {}
 

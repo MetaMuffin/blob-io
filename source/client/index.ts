@@ -1,14 +1,14 @@
 import { GLOBAL_CONFIG } from "../global";
 import { ICell } from "../types";
+import { ClientCell } from "./cell_render";
 
 var [canvas_sx, canvas_sy] = [0, 0];
 var ws: WebSocket;
 
 var mousex: number, mousey: number;
 
-var last_view_cache: { [key: string]: ICell } = {}
-var view: ICell[] = []
-var nick: string = ""
+var view: Map<string, ClientCell> = new Map()
+export var own_name: string = ""
 
 var spectator_meta: undefined | { x: number, y: number, r: number };
 var spectator_view_radius = 100
@@ -35,8 +35,8 @@ window.onload = async () => {
     if (spectator) {
         ws = new WebSocket(`ws://${window.location.host}/spectate`)
     } else {
-        nick = prompt("Please choose a nickname", "an unnamed cell") || "an unnamed cell"
-        ws = new WebSocket(`ws://${window.location.host}/play/${encodeURIComponent(nick)}`)
+        own_name = prompt("Please choose a nickname", "an unnamed cell") || "an unnamed cell"
+        ws = new WebSocket(`ws://${window.location.host}/play/${encodeURIComponent(own_name)}`)
     }
 
     const canvas = document.getElementById("canvas")
@@ -53,6 +53,7 @@ window.onload = async () => {
     window.onkeydown = (ev: KeyboardEvent) => {
         if (ev.repeat) return
         if (!spectator) if (ev.code == "KeyW") split(CLIENT_CONFIG.player_radius, false)
+        if (!spectator) if (ev.code == "Space") split(10000, true)
         if (ev.code == "KeyX") do_target_update = !do_target_update
         if (ev.code == "KeyC") do_view_update = !do_view_update
     }
@@ -68,8 +69,7 @@ window.onload = async () => {
         mousey = (ev.clientY - rect.top) * scaleY
     }
     window.onclick = (ev: any) => {
-        if (spectator) update_target()
-        else split(100000, true)
+        update_target()
     }
     window.onmousewheel = (ev: any) => {
         spectator_view_radius *= 1 + 0.2 * Math.sign(ev.deltaY)
@@ -79,26 +79,37 @@ window.onload = async () => {
     let p = document.createElement("p")
     p.textContent = "websocket connecting..."
     document.body.appendChild(p)
+
+    var ping_interval: any;
     ws.onopen = () => {
         ws.send(JSON.stringify({ type: "spawn" }))
+        ping_interval = setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 100)
         p.textContent = "awaiting spawn..."
     }
     ws.onclose = () => {
-        document.body.innerHTML = "websocket closed :("
+        document.body.innerHTML = "<h1>websocket closed :(</h1>"
         setTimeout(() => window.location.reload(), 1000)
     }
     ws.onmessage = (ev) => {
         var j: any = JSON.parse(ev.data.toString())
         if (j.view) {
-            last_view_cache = {}
-            for (const c of view) {
-                last_view_cache[c.id] = c
+            for (const c of j.view) {
+                var local = view.get(c.id)
+                if (!local) {
+                    view.set(c.id, new ClientCell(c))
+                    return
+                }
+                local.update_props(c)
             }
-            view = j.view
+            for (const [id, cell] of view.entries()) {
+                cell.cleanup_timeout += 1
+                if (cell.cleanup_timeout > 10) view.delete(id)
+            }
         }
         if (j.meta) spectator_meta = j.meta
-        if (j.nick) nick = j.nick
+        if (j.nick) own_name = j.nick
         if (j.config && !CLIENT_CONFIG) {
+            clearInterval(ping_interval)
             CLIENT_CONFIG = j.config
             setInterval(() => tick(), 1000 / CLIENT_CONFIG.tickrate)
             redraw(ctx)
@@ -147,6 +158,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     var now = performance.now()
     var delta = now - last_frame
     last_frame = now
+    var owned_cells = [...view.entries()].map(([i, c]) => c).filter(c => c.name == own_name)
 
     var cx, cy, view_dist
     if (spectator) {
@@ -154,11 +166,13 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         cy = (spectator_meta?.y || 0)
         view_dist = spectator_meta?.r || 1
     } else {
-        var owned_cells = view.filter(c => c.name == nick)
-        var d = owned_cells.reduce((a, v) => a + v.radius ** 2, 0) * owned_cells.length
-        cx = owned_cells.reduce((a, v) => a + v.x * v.radius ** 2, 0) / d
-        cy = owned_cells.reduce((a, v) => a + v.y * v.radius ** 2, 0) / d
-        view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius), 0) * CLIENT_CONFIG.view_radius
+        // var d = owned_cells.reduce((a, v) => a + v.radius ** 2, 0) * owned_cells.length
+        // cx = owned_cells.reduce((a, v) => a + v.x * v.radius ** 2, 0) / d
+        // cy = owned_cells.reduce((a, v) => a + v.y * v.radius ** 2, 0) / d        
+        cx = owned_cells.reduce((a, v) => a + v.x.value, 0) / owned_cells.length
+        cy = owned_cells.reduce((a, v) => a + v.y.value, 0) / owned_cells.length
+        view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius.value), 0) * CLIENT_CONFIG.view_radius
+        if (owned_cells.length == 0) view_dist = 1
         if (Number.isNaN(cx)) cx = 0
         if (Number.isNaN(cy)) cy = 0
     }
@@ -168,8 +182,12 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         viewy += (cy - viewy) * 0.002 * delta
     }
 
-    var zoom = Math.min(canvas_sx, canvas_sy) / view_dist
-    if (Number.isNaN(zoom)) zoom = 1;
+    var zoom = Math.min(canvas_sx, canvas_sy) / Math.max(view_dist, 100)
+
+    if (Number.isNaN(viewzoom) || !Number.isFinite(viewzoom)) throw new Error("Some number went NaN again....a uff");
+    if (Number.isNaN(viewx) || !Number.isFinite(viewx)) throw new Error("Some number went NaN again....b uff");
+    if (Number.isNaN(viewy) || !Number.isFinite(viewy)) throw new Error("Some number went NaN again....c uff");
+
     viewzoom += (zoom - viewzoom) * 0.02 * delta
 
     ctx.save()
@@ -181,19 +199,10 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     tm.inverse()
 
     ctx.fillStyle = "#333"
-    ctx.fillRect(0, 0, 100, 100)
+    ctx.fillRect(0, 0, CLIENT_CONFIG.map_size, CLIENT_CONFIG.map_size)
 
-    for (const cell of view) {
-        ctx.fillStyle = cell.type == "player" ? "#f00" : "#0f0"
-        if (cell.name == nick) ctx.fillStyle = "#f0f"
-        ctx.font = "5px sans-serif"
-        ctx.textAlign = "center"
-
-        ctx.beginPath()
-        ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.fillStyle = "white"
-        if (cell.name) ctx.fillText(cell.name, cell.x, cell.y)
+    for (const [id, cell] of view) {
+        cell.draw(ctx, delta)
     }
 
     ctx.restore()
@@ -202,17 +211,20 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.font = "10px sans-serif"
     ctx.fillStyle = "#9f9"
     if (!do_target_update) {
-        ctx.fillText("Target updating disabled", 10, 50, canvas_sx)
+        ctx.fillText("Target updating disabled (click to perform a single update)", 10, 50, canvas_sx)
     }
     if (!do_view_update) {
         ctx.fillText("View updating disabled", 10, 100, canvas_sx)
+    }
+    if (owned_cells.length == 0) {
+        ctx.fillText("You dont have any cells left. You should respawn", 10, 150)
     }
 
     ctx.textAlign = "center"
     ctx.font = "12px sans-serif"
     ctx.fillStyle = "#f99"
     if (spectator) ctx.fillText("Spectator", canvas_sx / 2, 20)
-    else ctx.fillText(`Player: ${nick}`, canvas_sx / 2, 20)
+    else ctx.fillText(`Player: ${own_name}`, canvas_sx / 2, 20)
 
     requestAnimationFrame(() => redraw(ctx));
 }
