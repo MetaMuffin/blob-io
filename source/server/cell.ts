@@ -1,6 +1,7 @@
 import { Field } from "serialize-ts";
 import { GLOBAL_CONFIG, VERBOSE } from "../global";
 import { CellType } from "../types";
+import { PlayerCell } from "./cell_types/player";
 import { Game } from "./game";
 import { distance, id, len, normalize_for } from "./helper";
 
@@ -12,7 +13,7 @@ export abstract class Cell {
     public x: number = 0
     public y: number = 0
     public radius: number = 0
-    
+
     protected game: Game
 
     constructor(game: Game) {
@@ -25,8 +26,13 @@ export abstract class Cell {
     }
 
     eat_tick(near_cells: Cell[]) {
-        var eatable_cells = near_cells.filter(c => c.radius * GLOBAL_CONFIG.min_eat_factor < this.radius)
-        for (const c of eatable_cells) {
+        for (const c of near_cells) {
+            //@ts-ignore
+            if (c.name && this.name && c.name == this.name && c.id != this.id) {
+                if (c.radius > this.radius) continue
+            } else {
+                if (c.radius * GLOBAL_CONFIG.min_eat_factor >= this.radius) continue
+            }
             var d = distance(this.x, this.y, c.x, c.y)
             if (d < this.radius) {
                 this.on_eat(c)
