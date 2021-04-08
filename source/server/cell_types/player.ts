@@ -57,7 +57,7 @@ export class PlayerCell extends Cell {
         eject_radius = Math.min(this.radius / Math.sqrt(2), Math.max(GLOBAL_CONFIG.player_radius, eject_radius))
         if (VERBOSE) console.log(`Cell with radius ${this.radius} (m=${this.radius ** 2}) is trying to eject cell of radius ${eject_radius} (m=${eject_radius ** 2}).`);
         var new_player_radius = Math.sqrt(this.radius ** 2 - eject_radius ** 2)
-        if (VERBOSE) console.log(`Left over radius is ${this.radius} (m=${this.radius ** 2})`);
+        if (VERBOSE) console.log(`Left over radius is ${new_player_radius} (m=${new_player_radius ** 2})`);
 
         var tdx = this.tx - this.x
         var tdy = this.ty - this.y

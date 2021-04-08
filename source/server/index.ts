@@ -22,14 +22,13 @@ function send_err(ws: any, message: any) {
 const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } = {
     target: (ws, nick, j) => {
         if (typeof j.y != "number" || typeof j.x != "number") return send_err(ws, "invalid x or y target position");
-        game.name_lookup[nick]?.forEach(c => {
+        game.name_lookup.get(nick)?.forEach(c => {
             c.tx = j.x
             c.ty = j.y
         })
     },
     split: (ws, nick, j) => {
-        if (!game.name_lookup[nick]) return
-        [...game.name_lookup[nick]].forEach(c => {
+        [...game.name_lookup.get(nick) || []].forEach(c => {
             if (typeof j.r != "number") return send_err(ws, "invalid eject radius")
             c.split(j.r, !!j.owned)
         })
@@ -90,7 +89,7 @@ async function main() {
         }
         ws.onclose = () => {
             delete player_websockets[nick]
-            game.name_lookup[nick]?.forEach(c => game.remove_cell(c))
+            game.name_lookup.get(nick)?.forEach(c => game.remove_cell(c))
             if (VERBOSE) console.log(`${nick} disconnected`);
         }
     })

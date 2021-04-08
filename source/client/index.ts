@@ -154,6 +154,8 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         cx = owned_cells.reduce((a, v) => a + v.x, 0) / owned_cells.length
         cy = owned_cells.reduce((a, v) => a + v.y, 0) / owned_cells.length
         view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius), 0) * CLIENT_CONFIG.view_radius
+        if (Number.isNaN(cx)) cx = 0
+        if (Number.isNaN(cy)) cy = 0
     }
 
     if (do_view_update) {
@@ -177,6 +179,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         ctx.fillStyle = cell.type == "player" ? "#f00" : "#0f0"
         if (cell.name == nick) ctx.fillStyle = "#f0f"
         ctx.font = "5px sans-serif"
+        ctx.textAlign = "center"
 
         ctx.beginPath()
         ctx.arc(cell.x, cell.y, cell.radius, 0, Math.PI * 2)
@@ -185,9 +188,9 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         if (cell.name) ctx.fillText(cell.name, cell.x, cell.y)
     }
 
-
     ctx.restore()
 
+    ctx.textAlign = "left"
     ctx.font = "10px sans-serif"
     ctx.fillStyle = "#9f9"
     if (!do_target_update) {
@@ -197,6 +200,11 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         ctx.fillText("View updating disabled", 10, 100, canvas_sx)
     }
 
+    ctx.textAlign = "center"
+    ctx.font = "12px sans-serif"
+    ctx.fillStyle = "#f99"
+    if (spectator) ctx.fillText("Spectator", canvas_sx / 2, 20)
+    else ctx.fillText(`Player: ${nick}`, canvas_sx / 2, 20)
 
     requestAnimationFrame(() => redraw(ctx));
 }

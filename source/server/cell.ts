@@ -13,6 +13,7 @@ export abstract class Cell {
     public x: number = 0
     public y: number = 0
     public radius: number = 0
+    public alive: boolean = false
 
     protected game: Game
 
@@ -33,6 +34,7 @@ export abstract class Cell {
             } else {
                 if (c.radius * GLOBAL_CONFIG.min_eat_factor >= this.radius) continue
             }
+            if (!c.alive) continue
             var d = distance(this.x, this.y, c.x, c.y)
             if (d < this.radius) {
                 this.on_eat(c)

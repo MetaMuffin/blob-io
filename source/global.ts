@@ -1,5 +1,5 @@
 
-export const VERBOSE = false
+export const VERBOSE = true
 export const GLOBAL_CONFIG = {
     tickrate: 20,
     food_radius: 1,
