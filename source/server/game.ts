@@ -73,6 +73,10 @@ export class Game {
         return Object.values(view)
     }
 
+    get_spectator_view(x: number, y: number, r: number): Cell[] {
+        return this.quadtree.query(new Box(x - r / 2, y - r / 2, x + r / 2, y + r / 2))
+    }
+
     spawn_player(name: string) {
         if (VERBOSE) console.log("Spawn player: " + name);
         var cell = new PlayerCell(this, name)

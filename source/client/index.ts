@@ -10,18 +10,31 @@ var last_view_cache: { [key: string]: ICell } = {}
 var view: ICell[] = []
 var nick: string = ""
 
+var spectator_meta: undefined | { x: number, y: number, r: number };
+var spectator_view_radius = 100
+
 var targetx = 50;
 var targety = 50;
 var do_target_update = true;
+var do_view_update = true;
+
+var viewx = 0;
+var viewy = 0;
 
 var CLIENT_CONFIG: any
 
 var inverted_transform_matrix: number[]
 
+var spectator = false
+
 window.onload = async () => {
-    nick = prompt("Please choose a nickname", "an unnamed cell") || "an unnamed cell"
-    //var nick = `nickname#${Math.floor(Math.random() * 10000)}`
-    ws = new WebSocket(`ws://${window.location.host}/ws/${encodeURIComponent(nick)}`)
+    spectator = window.location.hash.includes("spectator")
+    if (spectator) {
+        ws = new WebSocket(`ws://${window.location.host}/spectate`)
+    } else {
+        nick = prompt("Please choose a nickname", "an unnamed cell") || "an unnamed cell"
+        ws = new WebSocket(`ws://${window.location.host}/play/${encodeURIComponent(nick)}`)
+    }
 
     const canvas = document.getElementById("canvas")
     if (!canvas || !(canvas instanceof HTMLCanvasElement)) throw new Error("asdasdas");
@@ -36,8 +49,9 @@ window.onload = async () => {
 
     window.onkeydown = (ev: KeyboardEvent) => {
         if (ev.repeat) return
-        if (ev.code == "KeyW") split(CLIENT_CONFIG.player_radius, false)
+        if (!spectator) if (ev.code == "KeyW") split(CLIENT_CONFIG.player_radius, false)
         if (ev.code == "KeyX") do_target_update = !do_target_update
+        if (ev.code == "KeyC") do_view_update = !do_view_update
     }
     window.onkeyup = (ev: KeyboardEvent) => {
         ev.preventDefault()
@@ -50,8 +64,10 @@ window.onload = async () => {
         mousex = (ev.clientX - rect.left) * scaleX
         mousey = (ev.clientY - rect.top) * scaleY
     }
-    window.onclick = (ev: any) => split(100000, true)
-
+    window.onclick = (ev: any) => {
+        if (spectator) update_target()
+        else split(100000, true)
+    }
     resize()
 
     let p = document.createElement("p")
@@ -74,6 +90,7 @@ window.onload = async () => {
             }
             view = j.view
         }
+        if (j.meta) spectator_meta = j.meta
         if (j.nick) nick = j.nick
         if (j.config && !CLIENT_CONFIG) {
             CLIENT_CONFIG = j.config
@@ -86,9 +103,6 @@ window.onload = async () => {
 
 function tick() {
     if (!do_target_update) return
-    var imatrix = inverted_transform_matrix
-    targetx = mousex * imatrix[0] + mousey * imatrix[2] + imatrix[4];
-    targety = mousex * imatrix[1] + mousey * imatrix[3] + imatrix[5];
     update_target()
 }
 
@@ -100,11 +114,23 @@ function split(r: number, owned: boolean) {
 }
 
 export function update_target() {
-    ws.send(JSON.stringify({
-        type: "target",
-        x: targetx,
-        y: targety,
-    }))
+    var imatrix = inverted_transform_matrix
+    targetx = mousex * imatrix[0] + mousey * imatrix[2] + imatrix[4];
+    targety = mousex * imatrix[1] + mousey * imatrix[3] + imatrix[5];
+    if (!spectator) {
+        ws.send(JSON.stringify({
+            type: "target",
+            x: targetx,
+            y: targety,
+        }))
+    } else {
+        ws.send(JSON.stringify({
+            type: "view",
+            x: targetx,
+            y: targety,
+            r: spectator_view_radius
+        }))
+    }
 }
 
 export function redraw(ctx: CanvasRenderingContext2D) {
@@ -112,15 +138,27 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
-    
 
-    var owned_cells = view.filter(c => c.name == nick)
-    var cx = owned_cells.reduce((a, v) => a + v.x, 0) / owned_cells.length
-    var cy = owned_cells.reduce((a, v) => a + v.y, 0) / owned_cells.length
+    var cx, cy, view_dist
+    if (spectator) {
+        cx = (spectator_meta?.x || 0)
+        cy = (spectator_meta?.y || 0)
+        view_dist = spectator_meta?.r || 0
+    } else {
+        var owned_cells = view.filter(c => c.name == nick)
+        cx = owned_cells.reduce((a, v) => a + v.x, 0) / owned_cells.length
+        cy = owned_cells.reduce((a, v) => a + v.y, 0) / owned_cells.length
+        view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius), 0) * CLIENT_CONFIG.view_radius
+    }
 
+    if (do_view_update) {
+        viewx += (cx - viewx) * 0.02
+        viewy += (cy - viewy) * 0.02
+    }
+
+    var zoom = Math.min(canvas_sx, canvas_sy) / view_dist
     ctx.save()
-    var zoom = 3
-    ctx.transform(zoom, 0, 0, zoom, -cx * zoom + canvas_sx / 2, -cy * zoom + canvas_sy / 2)
+    ctx.transform(zoom, 0, 0, zoom, -viewx * zoom + canvas_sx / 2, -viewy * zoom + canvas_sy / 2)
 
     var tm = ctx.getTransform()
     var itm = tm.inverse()
@@ -145,10 +183,13 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 
     ctx.restore()
 
+    ctx.font = "10px sans-serif"
+    ctx.fillStyle = "#9f9"
     if (!do_target_update) {
-        ctx.font = "20px sans-serif"
-        ctx.fillStyle = "white"
         ctx.fillText("Target updating disabled", 10, 50, canvas_sx)
+    }
+    if (!do_view_update) {
+        ctx.fillText("View updating disabled", 10, 100, canvas_sx)
     }
 
 

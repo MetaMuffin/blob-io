@@ -6,11 +6,12 @@ import { existsSync, readFile, readFileSync } from "fs";
 import http from "http"
 import https from "https"
 import expressWs from "express-ws";
-import { GLOBAL_CONFIG } from "../global";
+import { GLOBAL_CONFIG, VERBOSE } from "../global";
 import { Game } from "./game";
-import { normalize_for } from "./helper";
+import { id, normalize_for } from "./helper";
 
-var websockets: { [key: string]: any } = {}
+var spectator_websockets: { [key: string]: { ws: any, x: number, y: number, r: number } } = {}
+var player_websockets: { [key: string]: any } = {}
 var game: Game = new Game()
 
 function send_err(ws: any, message: any) {
@@ -27,6 +28,7 @@ const PACKET_TYPES: { [key: string]: (ws: any, nick: string, j: any) => void } =
         })
     },
     split: (ws, nick, j) => {
+        if (!game.name_lookup[nick]) return
         [...game.name_lookup[nick]].forEach(c => {
             if (typeof j.r != "number") return send_err(ws, "invalid eject radius")
             c.split(j.r, !!j.owned)
@@ -65,17 +67,16 @@ async function main() {
         res.sendFile(join(__dirname, "../../public/favicon.ico"));
     });
 
-    app_ws.ws("/ws/:nickname", function (ws, req) {
-        console.log("somebody connected");
+    app_ws.ws("/play/:nickname", function (ws, req) {
         var nick = req.params.nickname || "unnamed"
         var nick_o = nick
-        while (websockets[nick]) {
+        while (player_websockets[nick]) {
             nick = `${nick_o}d#${Math.floor(Math.random() * 10000)}`
         }
-        websockets[nick] = ws
+        if (VERBOSE) console.log(`${nick} connected`);
+        player_websockets[nick] = ws
         game.spawn_player(nick)
         var has_config = false
-
 
         ws.onmessage = (ev) => {
             var j: any;
@@ -88,9 +89,36 @@ async function main() {
                 PACKET_TYPES[j.type](ws, nick, j)
         }
         ws.onclose = () => {
-            delete websockets[nick]
+            delete player_websockets[nick]
             game.name_lookup[nick]?.forEach(c => game.remove_cell(c))
-            console.log(`somebody disconnected ${nick}`);
+            if (VERBOSE) console.log(`${nick} disconnected`);
+        }
+    })
+
+    app_ws.ws("/spectate", function (ws, req) {
+        if (VERBOSE) console.log(`spectator joined`);
+        var spec_id = id()
+        var spec_info = spectator_websockets[spec_id] = {
+            ws, r: 0, x: 0, y: 0
+        }
+        var has_config = false
+
+        ws.onmessage = (ev) => {
+            var j: any;
+            try {
+                j = JSON.parse(ev.data.toString())
+            } catch (e) { ws.close(); console.log("INVALID JSON") }
+            if (!has_config) ws.send(JSON.stringify({ config: GLOBAL_CONFIG }))
+            has_config = true
+            if (j.type != "view") return send_err(ws, "as a spectator you can only use the 'view' packet")
+            if (typeof j.x != "number" || typeof j.y != "number" || typeof j.r != "number") return send_err(ws, "one or more values of x,y and r aren't numbers")
+            spec_info.x = j.x
+            spec_info.y = j.y
+            spec_info.r = j.r
+        }
+        ws.onclose = () => {
+            delete spectator_websockets[spec_id]
+            if (VERBOSE) console.log(`spectator left`);
         }
     })
 
@@ -107,10 +135,25 @@ async function main() {
 
 function tick() {
     game.tick()
-    Object.entries(websockets).forEach(([nick, ws]) => {
+    Object.entries(player_websockets).forEach(([nick, ws]) => {
         var view = game.get_player_view(nick).map(c => c.props)
         try {
             ws.send(JSON.stringify({ view, nick }))
+        } catch (e) {
+            console.log("Caught some errors of the shitty websocket library");
+        }
+    })
+    Object.entries(spectator_websockets).forEach(([spec_id, spec_info]) => {
+        var view = game.get_spectator_view(spec_info.x, spec_info.y, spec_info.r).map(c => c.props)
+        try {
+            spec_info.ws.send(JSON.stringify({
+                view,
+                meta: {
+                    x: spec_info.x,
+                    y: spec_info.y,
+                    r: spec_info.r
+                }
+            }))
         } catch (e) {
             console.log("Caught some errors of the shitty websocket library");
         }
