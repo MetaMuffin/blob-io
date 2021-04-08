@@ -1,5 +1,5 @@
 import { Field } from "serialize-ts";
-import { GLOBAL_CONFIG } from "../global";
+import { GLOBAL_CONFIG, VERBOSE } from "../global";
 import { CellType } from "../types";
 import { Game } from "./game";
 import { distance, id, len, normalize_for } from "./helper";
@@ -33,7 +33,7 @@ export abstract class Cell {
                 c.on_eaten(this)
                 this.game.remove_cell(c)
                 this.radius = len(this.radius, c.radius)
-                console.log(`${this.id} has eaten ${c.id}`);
+                if (VERBOSE) console.log(`${this.id} has eaten ${c.id}`);
             }
         }
     }

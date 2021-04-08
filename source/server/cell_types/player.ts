@@ -33,6 +33,7 @@ export class PlayerCell extends Cell {
         this.y += this.vy
         this.split_timer += 1
 
+        var vl = len(this.vx, this.vy)
         for (const c of near_cells) {
             if (!(c instanceof PlayerCell)) continue
             if (c.name != this.name) continue
@@ -41,18 +42,22 @@ export class PlayerCell extends Cell {
             if (d >= this.radius + c.radius) continue
             var tdx = c.x - this.x
             var tdy = c.y - this.y
-            var vl = len(this.vx, this.vy)
             this.x -= normalize_for(tdx, tdy) * vl
             this.y -= normalize_for(tdy, tdx) * vl
         }
+
+        if (this.x - this.radius < 0) this.x -= -Math.abs(this.vx)
+        if (this.y - this.radius < 0) this.y -= -Math.abs(this.vy)
+        if (this.x + this.radius > GLOBAL_CONFIG.map_size) this.x -= Math.abs(this.vx)
+        if (this.y + this.radius > GLOBAL_CONFIG.map_size) this.y -= Math.abs(this.vy)
     }
 
     split(eject_radius: number, keep_owner: boolean) {
         if (this.radius < Math.sqrt(2) * GLOBAL_CONFIG.player_radius) return
         eject_radius = Math.min(this.radius / Math.sqrt(2), Math.max(GLOBAL_CONFIG.player_radius, eject_radius))
-        if (VERBOSE) console.log(`Cell with radius ${this.radius} (m=${this.radius**2}) is trying to eject cell of radius ${eject_radius} (m=${eject_radius**2}).`);
-        this.radius = Math.sqrt(this.radius ** 2 - eject_radius ** 2)
-        if (VERBOSE) console.log(`Left over radius is ${this.radius} (m=${this.radius**2})`);
+        if (VERBOSE) console.log(`Cell with radius ${this.radius} (m=${this.radius ** 2}) is trying to eject cell of radius ${eject_radius} (m=${eject_radius ** 2}).`);
+        var new_player_radius = Math.sqrt(this.radius ** 2 - eject_radius ** 2)
+        if (VERBOSE) console.log(`Left over radius is ${this.radius} (m=${this.radius ** 2})`);
 
         var tdx = this.tx - this.x
         var tdy = this.ty - this.y
@@ -64,6 +69,16 @@ export class PlayerCell extends Cell {
         new_cell.x = this.x + normalize_for(tdx, tdy) * distance
         new_cell.y = this.y + normalize_for(tdy, tdx) * distance
         new_cell.radius = eject_radius
+
+        var out_ouf_bounds = false
+            || (new_cell.x - new_cell.radius < 0)
+            || (new_cell.y - new_cell.radius < 0)
+            || (new_cell.x + new_cell.radius > GLOBAL_CONFIG.map_size)
+            || (new_cell.y + new_cell.radius > GLOBAL_CONFIG.map_size)
+
+        if (out_ouf_bounds) return
+
+        this.radius = new_player_radius
         this.game.add_cell(new_cell)
     }
 
