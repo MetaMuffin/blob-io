@@ -37,7 +37,7 @@ export class Game {
         if (!c.alive) throw new Error("Tried to remove dead cell");
         c.alive = false
         this.cell_lookup.delete(c.id)
-        this.quadtree.remove(c)
+        if (this.quadtree.remove(c) != 1) throw new Error("cell was moved!!!!!!!!a")
         if (c instanceof PlayerCell) {
             var l = this.name_lookup.get(c.name)
             if (!l) throw new Error("Could not remove cell from name lookup map");
@@ -50,19 +50,21 @@ export class Game {
         }
     }
     update_cell_start(c: Cell) {
-        this.quadtree.remove(c)
+        if (this.quadtree.remove(c) != 1) throw new Error("cell was moved!!!!!!!!b")
     }
     update_cell_end(c: Cell) {
         this.quadtree.insert(c)
     }
 
     public tick() {
-        // this.cells.forEach(c => {
-        //     var near_box = new Box(c.x - c.radius * 1.2, c.y - c.radius * 1.2, c.x + c.radius * 1.2, c.y + c.radius * 1.2)
-        //     var near_cells = this.quadtree.query(near_box)
-        // })
-        this.quadtree.for_each_group((group) => {
-            group.forEach(c => c.tick(group))
+        this.quadtree.for_each(cell => {
+            var near = this.quadtree.query(new Box(
+                cell.x - cell.radius,
+                cell.y - cell.radius,
+                cell.x + cell.radius,
+                cell.y + cell.radius,
+            ))
+            cell.tick(near)
         })
     }
 
@@ -102,8 +104,8 @@ export class Game {
 
     spawn_food() {
         var cell = new FoodCell(this)
-        cell.x = GLOBAL_CONFIG.map_size * Math.random()
-        cell.y = GLOBAL_CONFIG.map_size * Math.random()
+        cell.x = Math.random() * (GLOBAL_CONFIG.map_size - GLOBAL_CONFIG.natural_food_inset * 2) + GLOBAL_CONFIG.natural_food_inset
+        cell.y = Math.random() * (GLOBAL_CONFIG.map_size - GLOBAL_CONFIG.natural_food_inset * 2) + GLOBAL_CONFIG.natural_food_inset
         cell.radius = GLOBAL_CONFIG.natural_food_radius
         cell.natural = true
         this.add_cell(cell)

@@ -20,14 +20,20 @@ export class Box {
             && this.y2 > other.y1
     }
     intersects_circle(x: number, y: number, r: number): boolean {
-        var i = rect_circle_intersection_test(
-            x, y, r,
-            this.x1,
-            this.y1,
-            this.x2 - this.x1,
-            this.y2 - this.y1
-        )
-        return i
+        return this.intersects(new Box(
+            x - r,
+            y - r,
+            x + r,
+            y + r,
+        ))
+        // var i = rect_circle_intersection_test(
+        //     x, y, r,
+        //     this.x1,
+        //     this.y1,
+        //     this.x2 - this.x1,
+        //     this.y2 - this.y1
+        // )
+        // return i
     }
     get center_x(): number {
         return (this.x1 + this.x2) * 0.5
@@ -37,10 +43,9 @@ export class Box {
     }
 }
 
-const QUAD_MAX_NODES = 100
+const QUAD_MAX_NODES = 4
 export class Quadtree {
     private box: Box
-
 
     private split: boolean = false
     private tl?: Quadtree
@@ -75,7 +80,6 @@ export class Quadtree {
             this.tr = new Quadtree(new Box(cx, this.box.y1, this.box.x2, cy))
             this.bl = new Quadtree(new Box(this.box.x1, cy, cx, this.box.y2))
             this.br = new Quadtree(new Box(cx, cy, this.box.x2, this.box.y2))
-            console.log(this.nodes_contained.length);
             this.nodes_intersecting.forEach(n => this.insert(n, depth))
             this.nodes_intersecting = []
             this.nodes_contained = []
@@ -84,7 +88,7 @@ export class Quadtree {
     }
 
     remove(node: Cell): number {
-        if (!this.box.intersects_circle(node.x, node.y, node.radius)) return 0
+        //if (!this.box.intersects_circle(node.x, node.y, node.radius)) return 0
         if (!this.split) {
             var si = this.nodes_intersecting.findIndex(c => c.id == node.id)
             var sii = this.nodes_contained.findIndex(c => c.id == node.id)
@@ -102,8 +106,8 @@ export class Quadtree {
     }
 
     query(selection: Box): Cell[] {
-        if (!this.split) return this.nodes_intersecting
         if (!this.box.intersects(selection)) return []
+        if (!this.split) return this.nodes_intersecting
         const e = () => { throw new Error("ekekkekekek"); }
         return [
             ...this.tl?.query(selection) || e(),
@@ -113,25 +117,14 @@ export class Quadtree {
         ]
     }
 
-    for_each_group(f: (near_cells: Cell[]) => void) {
-        if (this.split) {
-            this.tl?.for_each_group(f)
-            this.tr?.for_each_group(f)
-            this.bl?.for_each_group(f)
-            this.br?.for_each_group(f)
-        } else {
-            f(this.nodes_contained)
-        }
-    }
-
     for_each(f: (cell: Cell) => void) {
         if (this.split) {
             this.tl?.for_each(f)
             this.tr?.for_each(f)
-            this.tl?.for_each(f)
-            this.tl?.for_each(f)
+            this.bl?.for_each(f)
+            this.br?.for_each(f)
         } else {
-            this.nodes_intersecting.forEach(c => f(c))
+            this.nodes_contained.forEach(c => f(c))
         }
     }
 }

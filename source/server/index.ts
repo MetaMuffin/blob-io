@@ -6,7 +6,7 @@ import { existsSync, readFile, readFileSync } from "fs";
 import http from "http"
 import https from "https"
 import expressWs from "express-ws";
-import { GLOBAL_CONFIG, VERBOSE } from "../global";
+import { GLOBAL_CONFIG, PROFILING, VERBOSE } from "../global";
 import { Game } from "./game";
 import { id, normalize_for } from "./helper";
 
@@ -143,7 +143,11 @@ async function main() {
 }
 
 function tick() {
+    if (PROFILING) console.clear()
+    if (PROFILING) console.time("tick")
     game.tick()
+    if (PROFILING) console.timeEnd("tick")
+    if (PROFILING) console.time("send-view-player")
     Object.entries(player_websockets).forEach(([nick, ws]) => {
         var view = game.get_player_view(nick).map(c => c.props)
         try {
@@ -152,6 +156,8 @@ function tick() {
             console.log("Caught some errors of the shitty websocket library");
         }
     })
+    if (PROFILING) console.timeEnd("send-view-player")
+    if (PROFILING) console.time("send-view-spectator")
     Object.entries(spectator_websockets).forEach(([spec_id, spec_info]) => {
         var view = game.get_spectator_view(spec_info.x, spec_info.y, spec_info.r).map(c => c.props)
         try {
@@ -167,6 +173,7 @@ function tick() {
             console.log("Caught some errors of the shitty websocket library");
         }
     })
+    if (PROFILING) console.timeEnd("send-view-spectator")
 }
 
 main();

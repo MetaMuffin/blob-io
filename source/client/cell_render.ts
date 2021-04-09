@@ -70,7 +70,7 @@ export class ClientCell {
         ctx.textAlign = "center"
 
         ctx.beginPath()
-        ctx.arc(this.x.value, this.y.value, this.radius.value, 0, Math.PI * 2)
+        ctx.arc(this.x.value, this.y.value, Math.max(0.01, this.radius.value), 0, Math.PI * 2)
         ctx.fill()
         ctx.fillStyle = `rgba(255,255,255,${this.transparency.value})`
         if (this.name) ctx.fillText(this.name, this.x.value, this.y.value)

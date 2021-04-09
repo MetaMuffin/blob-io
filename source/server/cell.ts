@@ -38,10 +38,14 @@ export abstract class Cell {
             if (!c.alive) continue
             var d = distance(this.x, this.y, c.x, c.y)
             if (d < this.radius) {
+                this.game.remove_cell(c)
+
+                this.game.update_cell_start(this)
                 this.on_eat(c)
                 c.on_eaten(this)
-                this.game.remove_cell(c)
                 this.radius = len(this.radius, c.radius)
+                this.game.update_cell_end(this)
+
                 if (VERBOSE) console.log(`${this.id} has eaten ${c.id}`);
             }
         }
