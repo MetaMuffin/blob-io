@@ -216,7 +216,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     if (!do_view_update) {
         ctx.fillText("View updating disabled", 10, 100, canvas_sx)
     }
-    if (owned_cells.length == 0) {
+    if (owned_cells.length == 0 && !spectator) {
         ctx.fillText("You dont have any cells left. You should respawn", 10, 150)
     }
 
