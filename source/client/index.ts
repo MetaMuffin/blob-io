@@ -96,14 +96,17 @@ window.onload = async () => {
             for (const c of j.view) {
                 var local = view.get(c.id)
                 if (!local) {
-                    view.set(c.id, new ClientCell(c))
+                    var cc = new ClientCell(c)
+                    view.set(c.id, cc)
                     return
                 }
                 local.update_props(c)
             }
             for (const [id, cell] of view.entries()) {
                 cell.cleanup_timeout += 1
-                if (cell.cleanup_timeout > 10) view.delete(id)
+                if (cell.cleanup_timeout > 10) {
+                    view.delete(id)
+                }
             }
         }
         if (j.meta) spectator_meta = j.meta
@@ -201,7 +204,8 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     ctx.fillStyle = COLOR_SCHEME.background
     ctx.fillRect(0, 0, CLIENT_CONFIG.map_size, CLIENT_CONFIG.map_size)
 
-    for (const [id, cell] of view) {
+    var draw_order = [...view.values()].sort((a, b) => a.radius.value - b.radius.value)
+    for (const cell of draw_order) {
         cell.draw(ctx, delta)
     }
 
