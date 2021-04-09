@@ -1,6 +1,7 @@
 import { GLOBAL_CONFIG } from "../global";
 import { ICell } from "../types";
 import { ClientCell } from "./cell_render";
+import { COLOR_SCHEME } from "./config";
 
 var [canvas_sx, canvas_sy] = [0, 0];
 var ws: WebSocket;
@@ -64,7 +65,6 @@ window.onload = async () => {
         var rect = canvas.getBoundingClientRect(),
             scaleX = canvas.width / rect.width,
             scaleY = canvas.height / rect.height;
-
         mousex = (ev.clientX - rect.left) * scaleX
         mousey = (ev.clientY - rect.top) * scaleY
     }
@@ -151,7 +151,7 @@ export function update_target() {
 }
 
 export function redraw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = "#222";
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
@@ -198,7 +198,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     inverted_transform_matrix = [itm.a, itm.b, itm.c, itm.d, itm.e, itm.f]
     tm.inverse()
 
-    ctx.fillStyle = "#333"
+    ctx.fillStyle = COLOR_SCHEME.background
     ctx.fillRect(0, 0, CLIENT_CONFIG.map_size, CLIENT_CONFIG.map_size)
 
     for (const [id, cell] of view) {

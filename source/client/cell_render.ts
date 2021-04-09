@@ -1,5 +1,7 @@
 import { own_name } from "."
 import { CellType, ICell } from "../types"
+import { COLOR_SCHEME } from "./config"
+import { hue_variation, random_seeded } from "./helper"
 
 
 export class InterpolatedValue {
@@ -25,7 +27,7 @@ export class InterpolatedValue {
 
 
 export class ClientCell {
-
+    public id: string
     public x: InterpolatedValue
     public y: InterpolatedValue
     public radius: InterpolatedValue
@@ -33,8 +35,10 @@ export class ClientCell {
     public name?: string
     public cleanup_timeout: number
     public transparency: InterpolatedValue
+    public color: string
 
     constructor(initial_props: ICell) {
+        this.id = initial_props.id
         this.x = new InterpolatedValue(initial_props.x, 0.01)
         this.y = new InterpolatedValue(initial_props.y, 0.01)
         this.radius = new InterpolatedValue(0, 0.01, initial_props.radius)
@@ -42,6 +46,13 @@ export class ClientCell {
         this.type = initial_props.type
         this.name = initial_props.name
         this.cleanup_timeout = 0
+
+        var color = COLOR_SCHEME.food
+        var variation = 30
+        if (this.type == "food") variation = 60
+        if (this.type == "player") color = COLOR_SCHEME.player
+        if (this.name == own_name) color = COLOR_SCHEME.own_cells
+        this.color = hue_variation(color, variation, random_seeded(this.id)())
     }
 
     update_props(update: ICell) {
@@ -62,17 +73,16 @@ export class ClientCell {
             this.radius.value = 0
             this.transparency.value = 0
         }
-        
-        ctx.fillStyle = `rgba(0,255,0,${this.transparency.value})`
-        if (this.type == "player") ctx.fillStyle = `rgba(255,0,0,${this.transparency.value})`
-        if (this.name == own_name) ctx.fillStyle = `rgba(255,0,255,${this.transparency.value})`
+
+        ctx.globalAlpha = this.transparency.value
+        ctx.fillStyle = this.color
         ctx.font = "5px sans-serif"
         ctx.textAlign = "center"
 
         ctx.beginPath()
         ctx.arc(this.x.value, this.y.value, Math.max(0.01, this.radius.value), 0, Math.PI * 2)
         ctx.fill()
-        ctx.fillStyle = `rgba(255,255,255,${this.transparency.value})`
+        ctx.fillStyle = `white`
         if (this.name) ctx.fillText(this.name, this.x.value, this.y.value)
     }
 }
