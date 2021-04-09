@@ -48,11 +48,15 @@ export class PlayerCell extends Cell {
             this.y -= normalize_for(tdy, tdx) * vl
         }
 
-        if (this.x - this.radius < 0) this.x -= -Math.abs(this.vx)
-        if (this.y - this.radius < 0) this.y -= -Math.abs(this.vy)
-        if (this.x + this.radius > GLOBAL_CONFIG.map_size) this.x -= Math.abs(this.vx)
-        if (this.y + this.radius > GLOBAL_CONFIG.map_size) this.y -= Math.abs(this.vy)
-        
+        if (this.x - this.radius < 0) this.x -= -Math.abs(this.vx * 2)
+        if (this.y - this.radius < 0) this.y -= -Math.abs(this.vy * 2)
+        if (this.x + this.radius > GLOBAL_CONFIG.map_size) this.x -= Math.abs(this.vx * 2)
+        if (this.y + this.radius > GLOBAL_CONFIG.map_size) this.y -= Math.abs(this.vy * 2)
+        // this.x -= Math.max(0, this.x - this.radius)
+        // this.y -= Math.max(0, this.y - this.radius)
+        // this.x -= Math.min(0, GLOBAL_CONFIG.map_size - this.x - this.radius)
+        // this.y -= Math.min(0, GLOBAL_CONFIG.map_size - this.y - this.radius)
+
         this.game.update_cell_end(this)
     }
 
