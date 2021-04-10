@@ -183,7 +183,7 @@ function tick() {
 }
 
 function ip_limit_connect(ip:string): boolean {
-    if (player_count <= GLOBAL_CONFIG.max_players_total) return false
+    if (player_count >= GLOBAL_CONFIG.max_players_total) return false
     player_count += 1
     var v = players_per_ip.get(ip) ?? 0
     v += 1

@@ -17,5 +17,5 @@ export const GLOBAL_CONFIG = {
     
     max_players_total: 20,
     max_cells_per_player: 20,
-    max_player_per_ip: 2,
+    max_player_per_ip: 4,
 }
