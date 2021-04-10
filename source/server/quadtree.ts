@@ -105,16 +105,23 @@ export class Quadtree {
         }
     }
 
-    query(selection: Box): Cell[] {
-        if (!this.box.intersects(selection)) return []
-        if (!this.split) return this.nodes_intersecting
+    query(selection: Box): { [key: string]: Cell } {
+        if (!this.box.intersects(selection)) return {}
+        if (!this.split) {
+            var k: { [key: string]: Cell } = {}
+            for (const n of this.nodes_intersecting) {
+                k[n.id] = n
+            }
+            return k
+        }
         const e = () => { throw new Error("ekekkekekek"); }
-        return [
-            ...this.tl?.query(selection) || e(),
-            ...this.tr?.query(selection) || e(),
-            ...this.bl?.query(selection) || e(),
-            ...this.br?.query(selection) || e(),
-        ]
+        return Object.assign(
+            {},
+            this.tl?.query(selection),
+            this.tr?.query(selection),
+            this.bl?.query(selection),
+            this.br?.query(selection)
+        )
     }
 
     for_each(f: (cell: Cell) => void) {

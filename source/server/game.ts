@@ -58,21 +58,21 @@ export class Game {
 
     public tick() {
         this.quadtree.for_each(cell => {
-            var near = this.quadtree.query(new Box(
+            var near = Object.values(this.quadtree.query(new Box(
                 cell.x - cell.radius,
                 cell.y - cell.radius,
                 cell.x + cell.radius,
                 cell.y + cell.radius,
-            ))
+            )))
             cell.tick(near)
         })
     }
 
-    get_cell_view(c: Cell): { [key: string]: Cell } {
+    legacy_get_cell_view(c: Cell): { [key: string]: Cell } {
         let box = new Box(c.x - c.radius * GLOBAL_CONFIG.view_radius, c.y - c.radius * GLOBAL_CONFIG.view_radius, c.x + c.radius * GLOBAL_CONFIG.view_radius, c.y + c.radius * GLOBAL_CONFIG.view_radius)
         var rough = this.quadtree.query(box)
         var exact: { [key: string]: Cell } = {}
-        for (const cell of rough) {
+        for (const cell of Object.values(rough)) {
             var d = distance(cell.x, cell.y, c.x, c.y)
             if (d <= GLOBAL_CONFIG.view_radius * c.radius) exact[cell.id] = cell
         }
@@ -82,12 +82,23 @@ export class Game {
     get_player_view(name: string): Cell[] {
         var player_cells = this.name_lookup.get(name)
         if (!player_cells) return []
-        var view: { [key: string]: Cell } = {}
-        for (const c of player_cells) {
-            var cview = this.get_cell_view(c)
-            view = Object.assign(view, cview)
-        }
-        return Object.values(view)
+
+        var center_x = player_cells.reduce((a, v) => a + v.x, 0) / player_cells.length
+        var center_y = player_cells.reduce((a, v) => a + v.y, 0) / player_cells.length
+        var view_radius = Math.sqrt(player_cells.reduce((a, v) => a + v.radius, 0)) * GLOBAL_CONFIG.view_radius
+        var box = new Box(
+            center_x - view_radius,
+            center_y - view_radius,
+            center_x + view_radius,
+            center_y + view_radius
+        )
+
+        var view = Object.values(this.quadtree.query(box))
+        view.filter(cell => {
+            var d = distance(cell.x, cell.y, center_x, center_y)
+            return d <= view_radius
+        })
+        return view
     }
 
     get_spectator_view(x: number, y: number, r: number): Cell[] {
