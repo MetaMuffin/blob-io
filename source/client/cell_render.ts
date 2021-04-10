@@ -1,9 +1,8 @@
-import { own_name } from "."
+import { FAST_CELL_DRAW, own_name } from "."
 import { CellType, ICell } from "../types"
 import { COLOR_SCHEME } from "./config"
 import { cell_distance, Color, hue_variation, point_cell_distance, random_seeded } from "./helper"
 
-const FAST_CELL_DRAW = false
 
 export class InterpolatedValue {
     private _value: number

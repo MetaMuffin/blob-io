@@ -7,10 +7,9 @@ import { cell_distance } from "./helper";
 var [canvas_sx, canvas_sy] = [0, 0];
 var ws: WebSocket;
 
-var mousex: number, mousey: number;
-
 var view: Map<string, ClientCell> = new Map()
 export var own_name: string = ""
+export var FAST_CELL_DRAW = false
 
 var spectator_meta: undefined | { x: number, y: number, r: number };
 var spectator_view_radius = 100
@@ -20,6 +19,8 @@ var targety = 50;
 var do_target_update = true;
 var do_view_update = true;
 
+
+var mousex: number, mousey: number;
 var viewx = 0;
 var viewy = 0;
 var viewzoom = 1;
@@ -33,7 +34,9 @@ var inverted_transform_matrix: number[]
 var spectator = false
 
 window.onload = async () => {
-    spectator = window.location.hash.includes("spectator")
+    spectator = window.location.href.includes("#spectator")
+    FAST_CELL_DRAW = window.location.href.includes("#fast-graphics")
+
     if (spectator) {
         ws = new WebSocket(`ws://${window.location.host}/spectate`)
     } else {
