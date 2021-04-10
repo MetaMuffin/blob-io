@@ -71,7 +71,7 @@ window.onload = async () => {
     window.onclick = (ev: any) => {
         update_target()
     }
-    window.onmousewheel = (ev: any) => {
+    window.onwheel = (ev: any) => {
         spectator_view_radius *= 1 + 0.2 * Math.sign(ev.deltaY)
     }
     resize()
@@ -154,7 +154,7 @@ export function update_target() {
 }
 
 export function redraw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "#222";
+    ctx.fillStyle = COLOR_SCHEME.out_of_bounds;
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
@@ -174,7 +174,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
         // cy = owned_cells.reduce((a, v) => a + v.y * v.radius ** 2, 0) / d        
         cx = owned_cells.reduce((a, v) => a + v.x.value, 0) / owned_cells.length
         cy = owned_cells.reduce((a, v) => a + v.y.value, 0) / owned_cells.length
-        view_dist = owned_cells.reduce((a, v) => Math.max(a, v.radius.value), 0) * CLIENT_CONFIG.view_radius
+        view_dist = Math.sqrt(owned_cells.reduce((a, v) => a + v.radius.value, 0)) * CLIENT_CONFIG.view_radius
         if (owned_cells.length == 0) view_dist = 1
         if (Number.isNaN(cx)) cx = 0
         if (Number.isNaN(cy)) cy = 0
@@ -225,7 +225,7 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     }
 
     ctx.textAlign = "center"
-    ctx.font = "12px sans-serif"
+    ctx.font = "30px sans-serif"
     ctx.fillStyle = "#f99"
     if (spectator) ctx.fillText("Spectator", canvas_sx / 2, 20)
     else ctx.fillText(`Player: ${own_name}`, canvas_sx / 2, 20)

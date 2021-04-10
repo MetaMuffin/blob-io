@@ -8,10 +8,11 @@
 // }
 
 export const COLOR_SCHEME = {
+    out_of_bounds: "#000000",
     background: "#150e56",
     food: "#8fd6e1",
-    player: "#1597bb",
-    own_cells: "#15bba5",
+    player: "#de8537",
+    own_cells: "#ffad66",
 }
 
 
