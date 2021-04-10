@@ -20,7 +20,11 @@ export class PlayerCell extends Cell {
         this.radius = GLOBAL_CONFIG.player_radius
     }
 
-    on_eat(other: Cell): void { }
+    on_eat(other: Cell): void {
+        if (other instanceof PlayerCell) {
+            if (this.name == other.name) this.split_timer = 0
+        }
+    }
     on_eaten(eater: Cell): void { }
     type_tick(near_cells: Cell[]) {
         this.game.update_cell_start(this)
