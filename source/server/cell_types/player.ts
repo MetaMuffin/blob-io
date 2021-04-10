@@ -61,6 +61,7 @@ export class PlayerCell extends Cell {
     }
 
     split(eject_radius: number, keep_owner: boolean) {
+        if ((this.game.name_lookup.get(this.name)?.length ?? 0) > GLOBAL_CONFIG.max_cells_per_player) return
         if (this.radius < Math.sqrt(2) * GLOBAL_CONFIG.player_radius) return
         eject_radius = Math.min(this.radius / Math.sqrt(2), Math.max(GLOBAL_CONFIG.player_radius, eject_radius))
         if (VERBOSE) console.log(`Cell with radius ${this.radius} (m=${this.radius ** 2}) is trying to eject cell of radius ${eject_radius} (m=${eject_radius ** 2}).`);

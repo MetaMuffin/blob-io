@@ -13,6 +13,8 @@ import { id, normalize_for } from "./helper";
 var spectator_websockets: { [key: string]: { ws: any, x: number, y: number, r: number } } = {}
 var player_websockets: { [key: string]: any } = {}
 var game: Game = new Game()
+var players_per_ip: Map<string, number> = new Map()
+var player_count = 0
 
 function send_err(ws: any, message: any) {
     ws.send(JSON.stringify({ error: message }))
@@ -67,10 +69,11 @@ async function main() {
     });
 
     app_ws.ws("/play/:nickname", function (ws, req) {
+        if (!ip_limit_connect(req.ip)) return ws.close(1008, "Too many players connecting from your ip. :(")
         var nick = req.params.nickname || "unnamed"
         var has_config = false
         var spawned = false
-        
+
         const on_open = () => {
             var nick_o = nick
             while (player_websockets[nick]) {
@@ -86,7 +89,7 @@ async function main() {
             try {
                 j = JSON.parse(ev.data.toString())
             } catch (e) { ws.close(); console.log("INVALID JSON") }
-            
+
             if (!has_config) ws.send(JSON.stringify({ config: GLOBAL_CONFIG }))
             has_config = true
             if (!spawned) on_open()
@@ -101,6 +104,7 @@ async function main() {
             [...game.name_lookup.get(nick) || []].forEach(c => {
                 game.remove_cell(c)
             })
+            ip_limit_disconnect(req.ip)
         }
     })
 
@@ -174,6 +178,21 @@ function tick() {
         }
     })
     if (PROFILING) console.timeEnd("send-view-spectator")
+}
+
+function ip_limit_connect(ip:string): boolean {
+    if (player_count <= GLOBAL_CONFIG.max_players_total) return false
+    player_count += 1
+    var v = players_per_ip.get(ip) ?? 0
+    v += 1
+    players_per_ip.set(ip, v)
+    return v <= GLOBAL_CONFIG.max_player_per_ip
+}
+function ip_limit_disconnect(ip:string) {
+    player_count -= 1
+    var v = players_per_ip.get(ip)
+    if (!v || v < 1) return console.log("non-critical error here!")
+    players_per_ip.set(ip, v - 1)
 }
 
 main();

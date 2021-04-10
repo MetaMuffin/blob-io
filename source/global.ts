@@ -13,5 +13,9 @@ export const GLOBAL_CONFIG = {
     merge_cooldown: 20 * 5,
     natural_food_inset: 10,
     natural_food_count: 80,
-    natural_food_radius: 1
+    natural_food_radius: 1,
+    
+    max_players_total: 20,
+    max_cells_per_player: 20,
+    max_player_per_ip: 2,
 }
