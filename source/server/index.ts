@@ -69,7 +69,7 @@ async function main() {
     });
 
     app_ws.ws("/play/:nickname", function (ws, req) {
-        if (!ip_limit_connect(req.ip)) return ws.close(1008, "Too many players connecting from your ip. :(")
+        if (!ip_limit_connect(req.ip)) return ws.close(1008, "Too many players connecting from your ip or there are too many players in total. :(")
         var nick = req.params.nickname || "unnamed"
         var has_config = false
         var spawned = false
@@ -109,6 +109,7 @@ async function main() {
     })
 
     app_ws.ws("/spectate", function (ws, req) {
+        if (!ip_limit_connect(req.ip)) return ws.close(1008, "Too many players connecting from your ip or there are too many players in total. :(")
         if (VERBOSE) console.log(`spectator joined`);
         var spec_id = id()
         var spec_info = spectator_websockets[spec_id] = {
@@ -132,6 +133,7 @@ async function main() {
         ws.onclose = () => {
             delete spectator_websockets[spec_id]
             if (VERBOSE) console.log(`spectator left`);
+            ip_limit_disconnect(req.ip)
         }
     })
 
