@@ -1,8 +1,9 @@
 import { own_name } from "."
 import { CellType, ICell } from "../types"
 import { COLOR_SCHEME } from "./config"
-import { hue_variation, random_seeded } from "./helper"
+import { cell_distance, Color, hue_variation, point_cell_distance, random_seeded } from "./helper"
 
+const FAST_CELL_DRAW = false
 
 export class InterpolatedValue {
     private _value: number
@@ -35,7 +36,8 @@ export class ClientCell {
     public name?: string
     public cleanup_timeout: number
     public transparency: InterpolatedValue
-    public color: string
+    public fill_color: Color
+    public stroke_color: Color
 
     constructor(initial_props: ICell) {
         this.id = initial_props.id
@@ -52,7 +54,8 @@ export class ClientCell {
         if (this.type == "food") variation = 60
         if (this.type == "player") color = COLOR_SCHEME.player
         if (this.name == own_name) color = COLOR_SCHEME.own_cells
-        this.color = hue_variation(color, variation, random_seeded(this.id)())
+        this.fill_color = color.hue_variation(variation, this.id)
+        this.stroke_color = this.fill_color.lightness(0.3).saturation(0.5)
     }
 
     update_props(update: ICell) {
@@ -63,7 +66,7 @@ export class ClientCell {
     }
 
 
-    draw(ctx: CanvasRenderingContext2D, delta: number) {
+    draw(ctx: CanvasRenderingContext2D, delta: number, near_cells: ClientCell[]) {
         this.x.tick(delta)
         this.y.tick(delta)
         this.radius.tick(delta)
@@ -75,13 +78,44 @@ export class ClientCell {
         }
 
         ctx.globalAlpha = this.transparency.value
-        ctx.fillStyle = this.color
+        ctx.fillStyle = this.fill_color.toString()
+        ctx.strokeStyle = this.stroke_color.toString()
+        ctx.lineWidth = 0.3
         ctx.font = "5px sans-serif"
         ctx.textAlign = "center"
 
+
+        var x = this.x.value
+        var y = this.y.value
+        var r = this.radius.value
         ctx.beginPath()
-        ctx.arc(this.x.value, this.y.value, Math.max(0.01, this.radius.value), 0, Math.PI * 2)
+
+        if (FAST_CELL_DRAW) ctx.arc(this.x.value, this.y.value, Math.max(0.01, this.radius.value), 0, Math.PI * 2)
+        else {
+            var n_segments = Math.max(20, r * 10)
+            for (let i = 0; i < n_segments + 1; i++) {
+                var angle = i / n_segments * Math.PI * 2
+                var local_r = r
+                var seg_pre_x = x + Math.sin(angle) * local_r
+                var seg_pre_y = y + Math.cos(angle) * local_r
+                for (const c of near_cells) {
+                    if (c.id == this.id) continue
+                    var d = point_cell_distance(seg_pre_x, seg_pre_y, c)
+                    if (c.radius.value > this.radius.value) continue
+                    // local_r -= Math.min(c.radius.value, -d)
+                    // local_r -= Math.max(0, (this.radius.value / 3) - Math.abs(d) * 3)
+                    var v = -d / 2
+                    local_r += (v > 0) ? v : 0
+                }
+                var seg_x = x + Math.sin(angle) * local_r
+                var seg_y = y + Math.cos(angle) * local_r
+                if (i == 0) ctx.moveTo(x, y + r)
+                else ctx.lineTo(seg_x, seg_y)
+            }
+        }
+
         ctx.fill()
+        if (this.type == "player") ctx.stroke()
         ctx.fillStyle = `white`
         if (this.name) ctx.fillText(this.name, this.x.value, this.y.value)
     }

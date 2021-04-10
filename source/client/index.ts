@@ -2,6 +2,7 @@ import { GLOBAL_CONFIG } from "../global";
 import { ICell } from "../types";
 import { ClientCell } from "./cell_render";
 import { COLOR_SCHEME } from "./config";
+import { cell_distance } from "./helper";
 
 var [canvas_sx, canvas_sy] = [0, 0];
 var ws: WebSocket;
@@ -154,7 +155,7 @@ export function update_target() {
 }
 
 export function redraw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = COLOR_SCHEME.out_of_bounds;
+    ctx.fillStyle = COLOR_SCHEME.background.lightness(0.5).toString();
     ctx.clearRect(0, 0, canvas_sx, canvas_sy);
     ctx.fillRect(0, 0, canvas_sx, canvas_sy);
 
@@ -201,12 +202,12 @@ export function redraw(ctx: CanvasRenderingContext2D) {
     inverted_transform_matrix = [itm.a, itm.b, itm.c, itm.d, itm.e, itm.f]
     tm.inverse()
 
-    ctx.fillStyle = COLOR_SCHEME.background
+    ctx.fillStyle = COLOR_SCHEME.background.toString()
     ctx.fillRect(0, 0, CLIENT_CONFIG.map_size, CLIENT_CONFIG.map_size)
 
     var draw_order = [...view.values()].sort((a, b) => a.radius.value - b.radius.value)
     for (const cell of draw_order) {
-        cell.draw(ctx, delta)
+        cell.draw(ctx, delta, draw_order)
     }
 
     ctx.restore()
@@ -232,6 +233,3 @@ export function redraw(ctx: CanvasRenderingContext2D) {
 
     requestAnimationFrame(() => redraw(ctx));
 }
-
-
-

@@ -1,3 +1,4 @@
+import { ClientCell } from "./cell_render";
 
 
 function parse_hex6_color(col: string): [number, number, number] {
@@ -13,6 +14,18 @@ export function hue_variation(col: string, variation: number, random: number): s
     var [h, s, l] = rgb2hsl(r, g, b)
     h += (random * 2 - 1) * variation
     return `hsl(${h},${s}%,${l}%)`
+}
+export function cell_distance(a: ClientCell, b: ClientCell): number {
+    return cell_center_distance(a, b) - a.radius.value - b.radius.value
+}
+export function cell_center_distance(a: ClientCell, b: ClientCell): number {
+    return Math.sqrt((a.x.value - b.x.value) ** 2 + (a.y.value - b.y.value) ** 2)
+}
+export function point_cell_distance(x: number, y: number, c: ClientCell) {
+    return Math.sqrt((x - c.x.value) ** 2 + (y - c.y.value) ** 2) - c.radius.value
+}
+export function distance(x: number, y: number, x2: number, y2: number) {
+    return Math.sqrt((x - x2) ** 2 + (y - y2) ** 2)
 }
 
 function rgb2hsl(r: number, g: number, b: number): [number, number, number] {
@@ -50,6 +63,42 @@ function rgb2hsl(r: number, g: number, b: number): [number, number, number] {
     return [hue, sat, lum];
 }
 
+export class Color {
+    public h: number
+    public s: number
+    public l: number
+    constructor(h: number,s:number,l:number) {
+        this.h = h; this.s = s; this.l = l
+    }
+    public static from_hex(hex: string): Color {
+        var p = rgb2hsl(...parse_hex6_color(hex))
+        return new Color(...p)
+    }
+    toString(): string {
+        return `hsl(${this.h},${this.s}%,${this.l}%)`
+    }
+    hue_variation(f: number, seed: string): Color {
+        return new Color(
+            this.h + (random_seeded(seed)() * 2 - 1) * f,
+            this.s,
+            this.l
+        )
+    }
+    lightness(factor: number): Color {
+        return new Color(
+            this.h,
+            this.s,
+            this.l * factor
+        )
+    }
+    saturation(factor: number): Color {
+        return new Color(
+            this.h,
+            this.s * factor,
+            this.l,
+        )
+    }
+}
 
 export function random_seeded(str: string): () => number {
     for (var i = 0, h = 1779033703 ^ str.length; i < str.length; i++)
